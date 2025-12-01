@@ -1,0 +1,17 @@
+<main style="text-align: center; max-width: 500px; margin: 0 auto;">
+  <p style="text-align: {{logoPosition}};">
+    <img src="{{compImage}}" style="width: 150px;">
+  </p>
+
+  <h3>Hello {{UserName}},</h3>
+
+  <p>{{EmailContent}}</p>
+
+  <p>
+    <b>Transaction ID:</b> {{TxnId}}<br>
+  </p>
+
+  <footer style="margin-top: 20px; text-align: center;">
+    <p>{{compName}}</p>
+  </footer>
+</main>

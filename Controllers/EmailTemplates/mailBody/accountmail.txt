@@ -1,0 +1,22 @@
+<main style="text-align: center; border:0px solid #bc9018; max-width: 500px;margin: 0px auto;">
+  <p style="text-align: {{logoPosition}};">
+    <img src="{{compImage}}" style="width: 150px;">
+  </p>
+
+  <h4 style="text-align: left; margin-bottom: 20px; padding: 0 10px; line-height: 22px;">
+    Hello {{UserName}},<br><br>
+
+    {{EmailContent}}<br><br>
+
+    Thank you,<br>
+    Rempic Team
+  </h4>
+
+  <footer style="margin-top: 20px; text-align: center; font-size: 12px;">
+    <div>
+      <p style="text-align: center; background-color: #f6f6f6; padding:15px 0px;">
+        {{compName}}
+      </p>
+    </div>
+  </footer>
+</main>

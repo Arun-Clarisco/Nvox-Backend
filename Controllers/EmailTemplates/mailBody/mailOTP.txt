@@ -1,0 +1,14 @@
+<main style="text-align: center; border:0px solid #bc9018; max-width: 500px;margin: 0px auto;">
+  <P style="text-align: {{logoPosition}};">  <img src="{{compImage}}" style="width: 150px;"/>
+    <h4 style=" text-align: center;margin-bottom: 20px;">{{EmailContent}}</h4>
+    <p style=" text-align: center;"> This OTP will Expire in <span style="color:#8950DA;"> {{ExpTime}} mins </span> </p>
+    <h1 style="margin : 20px auto; text-align: center;">{{validOTP}}</h1>
+    <p style=" text-align: center;"> {{lastLine}} </p>
+
+
+    <footer style="margin-top: 20px; text-align: center; font-size: 12px;">
+      <div>
+      <p style=" text-align: center;  background-color: #f6f6f6; padding:15px 0px;">{{compName}} </p>
+      </div>
+    </footer>
+</main>
