@@ -68,7 +68,7 @@ module.exports = {
 		AdminKey: "",
 		Apikey: "",
 		APIUrl: '',
-		minBal: 0.02,
+		minBal: 0.001,
 	},
 
 	adaconfig: {

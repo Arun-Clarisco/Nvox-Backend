@@ -96,7 +96,7 @@ class AdmingetMethods {
               $toInt: {
                 $ifNull: [
                   { $arrayElemAt: ["$individualData.individualStatus", 0] },
-                  0,
+                  4,
                 ],
               },
             },
@@ -443,6 +443,7 @@ class AdmingetMethods {
           createdDate: 1,
           adminMoveStatus: 1,
           "userData.email": 1,
+          reason:1
         },
       });
 

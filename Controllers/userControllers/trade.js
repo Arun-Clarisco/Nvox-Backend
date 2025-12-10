@@ -16,7 +16,6 @@ const cron = require("node-cron");
 const TradeOrderHistory = require("../../Modules/userModule/tradeOrder");
 const socketHelper = require("../socket/socketCommon");
 const io = socketHelper.GetSocket();
-const { map } = require('litecore-lib/lib/opcode');
 const { orderQueue, orderQueue1, getQueueEvents } = require("../../helper/orderQueue");
 const { startWorker, startWorker1 } = require("../../Controllers/userControllers/matchOrderWorker");
 const { OpenOrderData, recentOrder } = require('./user_getMethods');

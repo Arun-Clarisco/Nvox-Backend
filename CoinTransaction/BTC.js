@@ -8,6 +8,11 @@ const hbs = require("nodemailer-express-handlebars");
 const Transaction = require("../Modules/userModule/Transaction");
 const axios = require("axios");
 const bitcoin = require("bitcoinjs-lib");
+const bip39 = require("bip39");
+const { BIP32Factory } = require('bip32');
+const assert = require('assert');
+const { ECPairFactory } = require('ecpair');
+const ecc = require("tiny-secp256k1");
 const isTestnet = process.env.NETWORK === "testnet";
 const btcnetwork = isTestnet
   ? bitcoin.networks.testnet
@@ -29,6 +34,21 @@ const {
   currencyData,
   adminHistory,
 } = require("../Controllers/adminControllers/adminController");
+const nodeCrypto = require("crypto");
+
+if (!globalThis.crypto) {
+  if (nodeCrypto.webcrypto) {
+    globalThis.crypto = nodeCrypto.webcrypto;
+  } else {
+    globalThis.crypto = {
+      getRandomValues: (typedArray) => {
+        const buf = nodeCrypto.randomBytes(typedArray.length);
+        typedArray.set(buf);
+        return typedArray;
+      }
+    };
+  }
+}
 const AdminSettings = require("../Modules/adminModule/AdminSettings");
 const Coindata = require("../Modules/userModule/pairData");
 const {
@@ -49,6 +69,12 @@ const depositMail = path.resolve(
 );
 
 const siteSetting = require("../Modules/adminModule/SiteSetting");
+const { addressesExtended } = require("@blockfrost/blockfrost-js/lib/endpoints/api/addresses");
+
+bitcoin.initEccLib(ecc);
+const bip32 = BIP32Factory(ecc);
+const ECPair = ECPairFactory(ecc);
+
 
 const transporter = nodemailer.createTransport({
   host: `${config.SMTP_Host}`,
@@ -170,42 +196,27 @@ function addExact(a, b) {
 
 exports.BTCCreateAddress = async (userid) => {
   try {
-    // const userid = res.locals.user_id;
-    // console.log('userid', userid)
     let existingAddress = await CoinAddress.findOne({
       user_id: new ObjectId(userid),
       currencyname: "BTC",
     });
-    // console.log('existingAddress', existingAddress)
     if (existingAddress) {
       console.log("BTC address already exists for this user.");
       return existingAddress;
     }
-    const keyPairCreation = bitcoin.ECPair.makeRandom({ network: btcnetwork });
-    // console.log('keyPairCreation----', keyPairCreation)
+    const keyPairCreation = ECPair.makeRandom({ network: btcnetwork });
     if (!keyPairCreation.privateKey) {
       return { error: "Failed to generate private key" };
     }
-    const privateKeyHex = keyPairCreation.privateKey.toString("hex");
-    // console.log('privateKeyHex-', privateKeyHex);
-    const keyPairForUser = bitcoin.ECPair.fromPrivateKey(
-      Buffer.from(privateKeyHex, "hex")
-    );
-    const publicKey = keyPairForUser.publicKey.toString("hex");
+    const privateKeyHex = Buffer.from(keyPairCreation.privateKey).toString("hex");
 
     const { address } = bitcoin.payments.p2wpkh({
-      pubkey: keyPairForUser.publicKey,
+      pubkey: keyPairCreation.publicKey,
       network: btcnetwork,
     });
     if (!address) {
       return { error: "Failed to generate wallet address" };
     }
-
-    // console.log('walletAddress', address);
-    // console.log('publicKey-----', publicKey);
-
-    // var keystore = encryptbtc(privateKeyHex);
-    // console.log('keystore', keystore);
 
     const baseDir = path.join(__dirname, "../Keystore");
 
@@ -219,7 +230,6 @@ exports.BTCCreateAddress = async (userid) => {
       JSON.stringify(privateKeyHex),
       "utf8"
     );
-    // console.log("Wallet Created Successfully!");
 
     const newAddress = new CoinAddress({
       user_id: userid,
@@ -231,86 +241,12 @@ exports.BTCCreateAddress = async (userid) => {
     await newAddress.save();
 
     return newAddress;
-    // }
   } catch (err) {
     console.error("BTC CreateAddress : err :", err);
     return false;
   }
 };
 
-// exports.BtcDeposit = async function (userId,symbol) {
-//     try {
-
-//             const address_det = await CoinAddress.findOne({ user_id: userId, currencyname: "BTC" });
-//             console.log(address_det, "address_det>>>>>>>>>")
-//             if (!address_det) {
-//                 console.log('No BTC address found for user');
-//                 return false;
-//             }
-
-//             bitcoin_rpc.call('listtransactions', ['*', 1000], async function (err, response) {
-//                 if (err) {
-//                     console.log('Error fetching transactions:', err);
-//                     // return;
-//                 }
-//                 console.log(response,"responce>>>>>>>>>")
-//                 const transactions = response.result;
-//                 console.log(transactions)
-//                 for (const tx of transactions) {
-//                     try {
-//                         const { confirmations, txid, amount, address, category } = tx;
-
-//                         if (category === "receive" && address === address_det.address) {
-//                             const existingDeposit = await Transaction.findOne({
-//                                 userId: mongoose.Types.ObjectId(userId),
-//                                 txnId: txid,
-//                                 type: "Deposit"
-//                             });
-
-//                             if (!existingDeposit) {
-//                                 if (confirmations >= 3) {
-
-//                                     const Symbol = symbol + "USDT"
-//                                     console.log('Symbol', Symbol);
-//                                     let coinData = await Coindata.findOne({ symbol: Symbol });
-//                                     console.log('coinData', coinData)
-//                                     let currentPrice = coinData?.current_price || 0;
-//                                     console.log(`Current Price of ${symbol}:`, currentPrice);
-
-//                                     let usdAmount = parseFloat(currentPrice) * parseFloat(amount);
-//                                     console.log(`USD Amount of Deposit:`, usdAmount);
-
-//                                     const depositData = new Transaction({
-//                                         userId: mongoose.Types.ObjectId(userId),
-//                                         address: address,
-//                                         amount: amount,
-//                                         type: "Deposit",
-//                                         txnId: txid,
-//                                         currentDeposit_livePrice: currentPrice,
-//                                         usdAmount:usdAmount,
-//                                         status: 1,
-//                                     });
-
-//                                     await depositData.save();
-//                                     await userDepositUpdate(userId, amount, symbol)
-//                                     // console.log(`BTC deposit of ${amount} confirmed for user ${userId}`);
-//                                 } else {
-//                                     console.log(`BTC transaction ${txid} found but waiting for confirmations.`);
-//                                 }
-//                             } else {
-//                                 console.log(`BTC transaction ${txid} already recorded.`);
-//                             }
-//                         }
-//                     } catch (error) {
-//                         console.log('Error processing transaction:', error);
-//                     }
-//                 }
-//             });
-
-//     } catch (e) {
-//         console.log('CoinDeposit Error:', e);
-//     }
-// };
 
 exports.BtcDeposit = async function (userId, symbol) {
   try {
@@ -435,7 +371,6 @@ exports.BtcDeposit = async function (userId, symbol) {
       maxProcessedBlock = Math.max(maxProcessedBlock, blockHeight);
     }
 
-    // Update latest processed block if new confirmed txs found
     if (maxProcessedBlock > previousBlock) {
       await CoinAddress.updateOne(
         { user_id: userId, currencyname: "BTC" },
@@ -466,53 +401,46 @@ exports.BtcWithdraw = async (userId, data, req) => {
   try {
     const adminId = userId;
     const adminData = await adminUser.findOne({ _id: adminId });
-    //console.log("adminData", adminData);
     let adminAddress;
 
     if (data.type == "approve") {
       if (adminData.admin_type == "SuperAdmin") {
         adminAddress = await AdminSettings.findOne(
           { userId: userId },
-          { btc_address: 1, btc_publicKey: 1 }
+          { btc_address: 1, btc_publicKey: 1, btc_seed: 1 }
         );
       } else {
         adminAddress = await AdminSettings.findOne({});
       }
 
       let adminPublicKey = await decryptionKey(adminAddress?.btc_publicKey);
-      // console.log('adminPublicKey----', adminPublicKey.length)
 
       const decoded = wif.decode(adminPublicKey);
       // console.log('Decoded WIF:', decoded);
       const privateKeyBuffer = Buffer.from(decoded.privateKey);
       // console.log('privateKeyBuffer:', privateKeyBuffer.toString('hex'));
-      const keyPair = bitcoin.ECPair.fromPrivateKey(privateKeyBuffer, {
+      const keyPair = ECPair.fromPrivateKey(privateKeyBuffer, {
         network: btcnetwork,
       });
-      const keyPairs = bitcoin.ECPair.fromPrivateKey(
+      const keyPairs = ECPair.fromPrivateKey(
         Buffer.from(keyPair.privateKey, "hex")
       );
-
-      const { address } = bitcoin.payments.p2wpkh({
-        pubkey: keyPair.publicKey,
-        network: btcnetwork,
-      });
-      // console.log('BTC Address:', address);
+      const mnemonic = await decryptionKey(adminAddress?.btc_seed)
       const addr_balance = await axios.get(
-        `${jsonrpc.btcconfig.APIUrl}addrs/${address}/balance?token=${config.BTC_TokenAPI}`
+        `${jsonrpc.btcconfig.APIUrl}addrs/${adminAddress?.btc_address}/balance?token=${config.BTC_TokenAPI}`
       );
-      // console.log('addr_balance---', addr_balance.data)
       const adminBalance = addr_balance.data.balance;
 
       const BTC_balance = adminBalance / 1e8;
       // console.log(BTC_balance, data.amount)
 
-      if (parseFloat(BTC_balance) >= parseFloat(data.amount)) {
+      if (parseFloat(BTC_balance) > parseFloat(data.amount)) {
         const transferData = await coinTransfer(
-          address,
+          adminAddress?.btc_address,
           data.amount,
           data.toaddress,
-          keyPairs
+          keyPairs,
+          mnemonic
         );
 
         if (transferData) {
@@ -606,49 +534,161 @@ function selectUTXOs(utxos, amountSats, feeSats) {
   return { selected, total };
 }
 
+// function validator(pubkey, msghash, signature) {
+//   return ECPair.fromPublicKey(pubkey).verify(msghash, signature);
+// }
+
+function validator(pubkey, msghash, sig) {
+  try {
+    if (pubkey.length === 32) {
+      const full = Buffer.concat([Buffer.from([0x02]), pubkey]);
+      return ECPair.fromPublicKey(full).verifySchnorr(msghash, sig);
+    }
+
+    return ECPair.fromPublicKey(pubkey).verify(msghash, sig);
+  } catch (err) {
+    console.error("Validator error:", err.message);
+    return false;
+  }
+}
+
+
+function validateAllSignatures(psbt) {
+  try {
+    for (let i = 0; i < psbt.inputCount; i++) {
+      const valid = psbt.validateSignaturesOfInput(i, validator);
+      if (!valid) {
+        return false;
+      }
+    }
+    return true;
+  } catch (err) {
+    console.error("⚠️ Signature validation failed:", err.message);
+    return false;
+  }
+}
+
+
 // Build, sign and return raw tx hex
-function buildTransaction(
+async function buildTransaction(
   selectedUTXOs,
   toAddress,
   amountSats,
   changeAddress,
   feeSats,
-  keyPair
+  keyPair,
+  mnemonic
 ) {
   const psbt = new bitcoin.Psbt({ network: btcnetwork });
-
   // Add inputs
-  selectedUTXOs.forEach((utxo) => {
-    psbt.addInput({
-      hash: utxo.tx_hash,
-      index: utxo.tx_output_n,
-      nonWitnessUtxo: Buffer.from(utxo.rawTxHex, "hex"),
-    });
-  });
-  // console.log(amountSats, "amountSats>>>>>>>>>>>>>>>")
+  // selectedUTXOs.forEach((utxo) => {
+  //   psbt.addInput({
+  //     hash: utxo.tx_hash,
+  //     index: utxo.tx_output_n,
+  //     nonWitnessUtxo: Buffer.from(utxo.rawTxHex, "hex"),
+  //   });
+  // });
+  let tweakedChildNode;
+  let TaprootStatus = false;
+
+  for (const utxo of selectedUTXOs) {
+    const { tx_hash, tx_output_n, value, rawTxHex } = utxo;
+    const input = {
+      hash: tx_hash,
+      index: tx_output_n,
+    };
+    // Detect and assign correct fields
+    if (/^(1|m|n)/.test(changeAddress)) {
+      // Legacy P2PKH
+      const p2pkh = bitcoin.payments.p2pkh({
+        pubkey: keyPair.publicKey,
+        network: btcnetwork,
+      });
+
+      if (!rawTxHex)
+        throw new Error(
+          `Legacy address ${changeAddress} needs full rawTxHex for nonWitnessUtxo`
+        );
+
+      input.nonWitnessUtxo = Buffer.from(rawTxHex, "hex");
+    } else if (/^(3|2)/.test(changeAddress)) {
+      // P2SH-P2WPKH
+      const p2wpkh = bitcoin.payments.p2wpkh({
+        pubkey: keyPair.publicKey,
+        network: btcnetwork,
+      });
+      const p2sh = bitcoin.payments.p2sh({
+        redeem: p2wpkh,
+        network: btcnetwork,
+      });
+      input.witnessUtxo = { script: p2sh.output, value: BigInt(value) };
+      input.redeemScript = p2sh.redeem.output;
+    } else if (/^(bc1q|tb1q)/.test(changeAddress)) {
+      // Native SegWit P2WPKH
+      const p2wpkh = bitcoin.payments.p2wpkh({
+        pubkey: keyPair.publicKey,
+        network: btcnetwork,
+      });
+
+      input.witnessUtxo = { script: p2wpkh.output, value: BigInt(value) };
+    } else if (/^(bc1p|tb1p)/.test(changeAddress)) {
+      // Taproot (P2TR)
+      const seed = await bip39.mnemonicToSeed(mnemonic);
+      const rootKey = bip32.fromSeed(seed, btcnetwork);
+      const path = `m/86'/0'/0'/0/0`;
+      const childNode = rootKey.derivePath(path);
+      const internalPubkey = keyPair.publicKey.slice(1, 33);
+      const childNodeXOnlyPubkey = bitcoin.toXOnly(internalPubkey);
+      assert.deepEqual(childNodeXOnlyPubkey, internalPubkey);
+      const p2tr = bitcoin.payments.p2tr({
+        internalPubkey: internalPubkey,
+        network: btcnetwork,
+      });
+      input.witnessUtxo = {
+        script: p2tr.output,
+        value: BigInt(value),
+      };
+      input.tapInternalKey = bitcoin.toXOnly(internalPubkey),
+      assert(p2tr.output);
+      assert.strictEqual(p2tr.address, changeAddress);
+      tweakedChildNode = childNode.tweak(
+        bitcoin.crypto.taggedHash("TapTweak", childNodeXOnlyPubkey)
+      );
+      TaprootStatus = true;
+    } else {
+      throw new Error("Unsupported address format: " + changeAddress);
+    }
+
+    psbt.addInput(input);
+  }
+
+
   // Add output to recipient
-  psbt.addOutput({ address: toAddress, value: amountSats });
+  psbt.addOutput({ address: toAddress, value: BigInt(amountSats) });
 
   // Calculate change
   const inputTotal = selectedUTXOs.reduce((sum, utxo) => sum + utxo.value, 0);
   const change = inputTotal - amountSats - feeSats;
-  // console.log(change, "change>>>>>>>>>>>>>>>")
 
   if (change > 0) {
-    psbt.addOutput({ address: changeAddress, value: change });
+    psbt.addOutput({ address: changeAddress, value: BigInt(change) });
   }
 
   // Sign all inputs
-  selectedUTXOs.forEach((_, idx) => {
-    psbt.signInput(idx, keyPair);
-  });
+  for (let i = 0; i < selectedUTXOs.length; i++) {
+    psbt.signInput(i, TaprootStatus ? tweakedChildNode : keyPair);
+  }
 
   // Validate signatures
-  psbt.validateSignaturesOfAllInputs();
-  psbt.finalizeAllInputs();
 
-  // Extract raw transaction hex
-  return psbt.extractTransaction().toHex();
+  if (validateAllSignatures(psbt)) {
+    psbt.finalizeAllInputs();
+    const tx = psbt.extractTransaction();
+
+    return tx.toHex()
+  } else {
+    console.log("❌ Transaction aborted due to invalid signature.");
+  }
 }
 
 // Get raw transaction hex for each UTXO (required for signing)
@@ -681,7 +721,7 @@ async function getRecommendedFeeRate() {
   return res.data.fastestFee;
 }
 
-async function coinTransfer(fromAddress, amountBTC, toAddress, keyPair) {
+async function coinTransfer(fromAddress, amountBTC, toAddress, keyPair, mnemonic) {
   try {
     const amountSats = Math.round(amountBTC * 1e8);
 
@@ -716,13 +756,14 @@ async function coinTransfer(fromAddress, amountBTC, toAddress, keyPair) {
     );
 
     // Step 7: Build, sign, and serialize the transaction
-    const rawTxHex = buildTransaction(
+    const rawTxHex = await buildTransaction(
       selectedWithHex,
       toAddress,
       amountSats,
       fromAddress,
       actualFee,
-      keyPair
+      keyPair,
+      mnemonic
     );
 
     // Step 8: Broadcast transaction
@@ -731,7 +772,7 @@ async function coinTransfer(fromAddress, amountBTC, toAddress, keyPair) {
     return result.tx.hash;
   } catch (error) {
     console.error("Transfer failed:", error.message);
-    throw error;
+    // throw error;
   }
 }
 
@@ -765,7 +806,7 @@ exports.Btc_adminMove = async (ip, adminId, symbol, req) => {
 
       const BTC_balance = userBalance / 1e8;
 
-      const keyPairs = bitcoin.ECPair.fromPrivateKey(
+      const keyPairs = ECPair.fromPrivateKey(
         Buffer.from(userPublicKey, "hex")
       );
       if (Number(BTC_balance) >= jsonrpc.btcconfig.minBal) {

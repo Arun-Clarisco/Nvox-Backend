@@ -12,6 +12,7 @@ var addressSchema = new Schema({
 	"solBlock":{type: Object, default: { sol: 0, token: 0 } },
 	"adaBlock": {type:Object, default: {ada:0, token:0}},
 	"btcBlock": {type:Object, default: {btc:0, token:0}},
+	"ltcBlock": {type:Object, default: {ltc:0, token:0}},
 	"datecreated": { type: Date, default: Date.now },
 	"referenceId": { type: String, lowercase: true, required: true, index: true, unique: true },
 });

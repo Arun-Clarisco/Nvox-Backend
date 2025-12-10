@@ -9,6 +9,8 @@ const axios = require("axios");
 const { encryptData, decryptData } = require("../../Config/Security");
 const UserDb = require("../../Modules/userModule/userModule");
 const { findById, findByIdAndUpdate } = require("../../Modules/SupportTicket");
+const mongoose = require("mongoose");
+
 
 const transporter = nodemailer.createTransport({
   host: `${Config.SMTP_Host}`,
@@ -411,18 +413,37 @@ class subAdminMethods {
       });
     }
   };
-  // delete functionality
+  //............. delete functionality.................// 
   deleteSubAdmin = async (req, res) => {
     try {
+      const adminId = res.locals.admin_id;
       const { id } = req.params;
-      // console.log("Delete id---", id);
+      const ip = req.body.ip;
+      //console.log("IP from frontend:", ip);
 
+      if (!id) {
+        return res.send({
+          status: false,
+          message: "Invalid Admin Credentials...",
+        });
+      }
+
+      const adminTypeData = await adminUser.findById({ _id: adminId });
+      //console.log("adminTypeData", adminTypeData);
+      // return;
       const deleteSubAdmin = await adminUser.findByIdAndDelete(id);
       // console.log("deleted---", deleteSubAdmin);
-
-      // if (!deleteSubAdmin) {
-      //   return res.status(404).json({ status: false, message: "Sub Admin not found" });
-      // }
+      if (adminTypeData.admin_type == "SuperAdmin") {
+        const deleteAdminActivity = await this.adminActivity(
+          req,
+          ip,
+          "SubAdmin Delete",
+          adminTypeData.email, // superadmin email
+          adminTypeData.admin_type,
+          deleteSubAdmin.email,
+          `Subadmin has been deleted successfully`
+        );
+      }
       return res.send({
         status: true,
         message: "Sub Admin deleted successfully",
@@ -431,11 +452,12 @@ class subAdminMethods {
     } catch (error) {
       console.error("DeleteSubAdmin error:", error);
       res
-        .status(500)
         .send({ status: false, message: "Error deleting Sub Admin" });
     }
-  };
-  // login user get data response
+  };  
+
+  //............. login user get data response...........
+ 
   subAdminGetData = async (req, res) => {
     try {
       const subAdminId = res.locals.admin_id;
@@ -602,10 +624,10 @@ class subAdminMethods {
 
       // console.log("adminactivityData>>>>", adminactivityData);
 
-      const total = await subadminactvityDb.countDocuments();
+      const total = await subadminactvityDb.countDocuments(query);
 
       // console.log("total---", total);
-
+      
       return res.send({
         status: true,
         data: adminactivityData,
@@ -623,12 +645,14 @@ class subAdminMethods {
       const adminId = res.locals.admin_id;
       const adminData = await adminUser.findById({ _id: adminId });
       // console.log("adminData", adminData);
-
+      
       const { userId, lastloginIpAddress } = req.body;
-      // console.log("Received User ID:", userId, "ip", lastloginIpAddress);
-
-      const TfaUserData = await UserDb.findById({ _id: userId });
-      // console.log("TfaUserData", TfaUserData);
+      const objectUserId = new mongoose.Types.ObjectId(userId); 
+     // console.log("objectUserId", objectUserId); 
+      
+       
+      const TfaUserData = await UserDb.findOne({ _id: objectUserId });
+     // console.log("TfaUserData", TfaUserData);  
 
       let adminTfaDisableEncrypt;
 
@@ -678,7 +702,7 @@ class subAdminMethods {
             "TFA Disable",
             adminData.email,
             adminData.admin_type,
-            adminData.email,
+            TfaDisableUpdate.email,
             `${TfaUserData.email} user's TFA has been disabled.`
           );
         } else if (adminData.admin_type == "SubAdmin") {

@@ -1330,16 +1330,17 @@ class AdminController {
     }
   };
 
-  adminAddress = async (req, res) => {
+    adminAddress = async (req, res) => {
     try {
-      const id = res.locals.admin_id;
+      const id = res.locals.admin_id; 
+      const adminTypeData = await adminUser.findById({ _id: id }); 
+     
+
 
       const decrypt =
         req.body && req.body.data ? await decryptData(req.body.data) : "";
-      // console.log("decrupt", decrypt);
 
       const request = decrypt;
-      // console.log("request----", request);
 
       const adminAddr = await adminSettings.findOne({ userId: id });
       const updates = {};
@@ -1348,10 +1349,12 @@ class AdminController {
       if (request.btc_address) updates.btc_address = request.btc_address;
       if (request.btc_publicKey)
         updates.btc_publicKey = encryptKey(request.btc_publicKey);
+      if (request.btc_seed) updates.btc_seed = encryptKey(request.btc_seed);
       if (request.sol_address) updates.sol_address = request.sol_address;
       if (request.sol_key) updates.sol_key = encryptKey(request.sol_key);
       if (request.ltc_address) updates.ltc_address = request.ltc_address;
       if (request.ltc_key) updates.ltc_key = encryptKey(request.ltc_key);
+      if (request.ltc_seed) updates.ltc_seed = encryptKey(request.ltc_seed);
       if (request.ada_address) updates.ada_address = request.ada_address;
       if (request.ada_key) updates.ada_key = encryptKey(request.ada_key);
 
@@ -1362,14 +1365,38 @@ class AdminController {
           const data = new adminSettings(updates);
           adminData = await data.save();
 
-          message = "Admin Data Created";
+          message = "Admin Data Created"; 
+          if (adminTypeData.admin_type == "SuperAdmin") {
+            const adminAddressCreate = await subAdminMethods.adminActivity(
+              req,
+              request.ip,
+              "Admin Address Create",
+              adminTypeData.email,
+              adminTypeData.admin_type,
+              adminTypeData.email,
+              "Admin Address Created successfully"
+            );
+          }
+
         } else {
           adminData = await adminSettings.findOneAndUpdate(
             { userId: id },
             { $set: updates },
             { new: true }
           );
-          message = "Admin Data Updated";
+          message = "Admin Data Updated"; 
+           if (adminTypeData.admin_type == "SuperAdmin") {
+            const adminAddressCreate = await subAdminMethods.adminActivity(
+              req,
+              request.ip,
+              "Admin Address Update",
+              adminTypeData.email,
+              adminTypeData.admin_type,
+              adminTypeData.email,
+              "Admin address updated successfully"
+            );
+          }
+          
         }
         res.send({ status: true, message, adminData });
       } else {

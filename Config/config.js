@@ -47,6 +47,9 @@ const config = {
 
     BTCURL : process.env.BTC_URL, 
     BTC_TokenAPI : process.env.BTC_TokenAPI,
+    
+    network: process.env.NETWORK,
+    LTC_URL: process.env.LTC_URL
 }
 // 0x59acad33c2f1d0193d5a3538192c23f1d9d2de18
 module.exports = config

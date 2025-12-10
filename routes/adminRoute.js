@@ -39,7 +39,7 @@ router.post("/create-termsPage", adminAuth.verifyToken, adminController.CreateTe
 router.put("/edit-termsPage/:_id", adminAuth.verifyToken, adminController.editTermspageData);
 
 
-// ..............user routes...................
+// ..............user routes................... 
 router.get("/userDetails", adminAuth.verifyToken,adminGetmethods.getuserdetails);
 router.get("/user-withdrawRequest", adminAuth.verifyToken, adminGetmethods.adminWithdraw);
 router.get("/user-Transactionlist", adminAuth.verifyToken, adminGetmethods.getTransactionHistory);
@@ -67,7 +67,7 @@ router.post("/create-subAdmin", adminAuth.verifyToken, SubAdminController.Create
 router.get("/get-subAdmin", adminAuth.verifyToken, SubAdminController.getSubAdmin);
 router.put("/edit-subAdmin/:id", adminAuth.verifyToken, SubAdminController.UpdateSubAdmin);
 router.get("/getOneUserData/:id", adminAuth.verifyToken, SubAdminController.getOneUserEditData);  
-router.delete("/delete-subAdmin/:id", adminAuth.verifyToken, SubAdminController.deleteSubAdmin);   
+router.post("/delete-subAdmin/:id", adminAuth.verifyToken, SubAdminController.deleteSubAdmin);   
 // subadmin login view and edit response route
 router.get("/view-edit-GetData", adminAuth.verifyToken, SubAdminController.subAdminGetData);  
 router.post("/admin-activestatus/:id", adminAuth.verifyToken, SubAdminController.activeDeactiveSubAdmin);  

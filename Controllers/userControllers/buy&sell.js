@@ -107,7 +107,7 @@ const getOrder = async (req, res) => {
 };
 
 
-const orderIdHistory = (req, res) => {
+const orderIdHistory = async(req, res) => {
   try{
   const userId = res.locals.user_id;
   const { orderId } = req.body;
@@ -117,8 +117,8 @@ const orderIdHistory = (req, res) => {
     clearTimeout(pendingRequestsMap.get(key).timeout);
   }
 
-  const timeout = setTimeout(() => {
-    handleLatestOrderIdHistory(pendingRequestsMap.get(key).req, pendingRequestsMap.get(key).res);
+  const timeout = setTimeout(async() => {
+    await handleLatestOrderIdHistory(pendingRequestsMap.get(key).req, pendingRequestsMap.get(key).res);
     pendingRequestsMap.delete(key); 
   }, 5000);
 
@@ -163,6 +163,7 @@ const handleLatestOrderIdHistory = async (req, res) => {
       );
       transakOrder = orderResponse.data.data;
     } catch (err) {
+      console.log(err)
       if (err.response?.status === 400 && err.response.data?.message === "Order not found") {
         return res.status(404).send({
           status: false,

@@ -1,6 +1,10 @@
 const config = require("../Config/config");
-const litecoin = require('litecore-lib');
 const bitcoin = require('bitcoinjs-lib');
+const bip39 = require("bip39");
+const { BIP32Factory } = require('bip32');
+const assert = require('assert');
+const { ECPairFactory } = require("ecpair");
+const ecc = require("tiny-secp256k1");
 const coininfo = require('coininfo');
 const mongoose = require('mongoose')
 const CoinAddress = require('../Modules/userModule/CoinAddress');
@@ -10,20 +14,57 @@ const fs = require('fs');
 const path = require('path');
 const nodemailer = require("nodemailer");
 const hbs = require("nodemailer-express-handlebars");
-const { userDepositUpdate, decryptionKey, rejectUserRequest, adminHistory } = require('../Controllers/adminControllers/adminController');
+const { userDepositUpdate, decryptionKey, rejectUserRequest, adminHistory, userHistory } = require('../Controllers/adminControllers/adminController');
 const Coindata = require('../Modules/userModule/pairData');
 const depositTransaction = require('../Modules/userModule/Transaction');
+const depositMail = path.resolve(
+  __dirname,
+  "../Controllers/EmailTemplates/mailBody/depositMail.txt"
+);
 const isTestnet = process.env.NETWORK === 'testnet';
-// const network = isTestnet ? coininfo.litecoin.test.toBitcoinJS() : "";
-const network = isTestnet ? litecoin.Networks.testnet : litecoin.Networks.livenet;
+const network = isTestnet ? {
+  messagePrefix: '\x19Litecoin Signed Message:\n',
+  bech32: 'tltc',
+  bip32: { public: 0x043587cf, private: 0x04358394 },
+  pubKeyHash: 0x6f,
+  scriptHash: 0x3a,
+  wif: 0xef,
+} : {
+  messagePrefix: '\x19Litecoin Signed Message:\n',
+  bech32: 'ltc',
+  bip32: { public: 0x019da462, private: 0x019d9cfe },
+  pubKeyHash: 0x30,
+  scriptHash: 0x32,
+  wif: 0xb0,
+}
+
+const nodeCrypto = require("crypto");
+
+if (!globalThis.crypto) {
+  if (nodeCrypto.webcrypto) {
+    globalThis.crypto = nodeCrypto.webcrypto;
+  } else {
+    globalThis.crypto = {
+      getRandomValues: (typedArray) => {
+        const buf = nodeCrypto.randomBytes(typedArray.length);
+        typedArray.set(buf);
+        return typedArray;
+      }
+    };
+  }
+}
 const mempoolJS = require("@mempool/mempool.js");
 const AdminSettings = require('../Modules/adminModule/AdminSettings');
 const { default: axios } = require('axios');
 const rpcUrl = require('../Config/rpcUrl');
 const { adminMovedStatus } = require('../Controllers/userControllers/userController');
 const subAdminMethods = require("../Controllers/adminControllers/SubAdminController");
-const UserDb = require("../Modules/userModule/userModule");
 const adminUser = require("../Modules/adminModule/AdminModule");
+const userDb = require("../Modules/userModule/userModule");
+
+bitcoin.initEccLib(ecc);
+const bip32 = BIP32Factory(ecc);
+const ECPair = ECPairFactory(ecc);
 
 const approveEmail = path.resolve(
   __dirname,
@@ -123,41 +164,6 @@ function getUnique(arr, index) {
   return unique;
 }
 
-// exports.LTCAddress = async (userid) => {
-//     // const userid = res.locals.user_id
-//         let existingAddress = await CoinAddress.findOne({ user_id: new ObjectId(userid), currencyname: "LTC" });
-//         if (existingAddress) {
-//             console.log('LTC address already exists for this user.');
-//             return existingAddress;
-//         }
-//         const account = new litecoin.PrivateKey('mainnet');
-//         const walletPrivate = account.toString();
-//         const walletAddress = account.toAddress().toString();
-
-//         const privateKey = litecoin.PrivateKey.fromWIF(walletPrivate);
-//         const fromAddress = privateKey.toAddress(network).toString();
-//         const baseDir = path.join(__dirname, '../Keystore/');
-//         try {
-//             const filePath = path.join(baseDir, walletAddress.toLowerCase() + ".json");
-//             await fs.promises.writeFile(filePath, JSON.stringify(privateKey), 'utf8');
-//             console.log("LTC Wallet Created Successfully!");
-
-//             const newAddress = new CoinAddress({
-//                 user_id: userid,
-//                 address: fromAddress,
-//                 currencyname: 'LTC',
-//                 encData: privateKey,
-//             });
-
-//             await newAddress.save();
-//             return newAddress;
-
-//         }
-//         catch (err) {
-//             console.log("LTC CreateAddress : err : ", err)
-//             return 
-//         }
-// }
 
 exports.LTCAddress = async (userid) => {
   try {
@@ -167,16 +173,19 @@ exports.LTCAddress = async (userid) => {
       return existingAddress;
     }
 
-    const privateKey = new litecoin.PrivateKey(network);
-    const walletAddress = privateKey.toAddress().toString();
-    const wif = privateKey.toWIF();
+    const keyPair = ECPair.makeRandom({ network });
+    const { address } = bitcoin.payments.p2pkh({
+      pubkey: keyPair.publicKey,
+      network: network,
+    });
+    const walletAddress = address;
+    const wif = keyPair.toWIF();
 
     const baseDir = path.join(__dirname, '../Keystore/');
     const filePath = path.join(baseDir, walletAddress.toLowerCase() + ".json");
 
     await fs.promises.writeFile(filePath, JSON.stringify({ wif }), 'utf8');
 
-    // console.log("LTC Wallet Created Successfully!");
 
     const newAddress = new CoinAddress({
       user_id: userid,
@@ -194,111 +203,73 @@ exports.LTCAddress = async (userid) => {
   }
 };
 
-// exports.LTCAddress = async (userid) => {
-//     try {
-//         const existingAddress = await CoinAddress.findOne({ user_id: new ObjectId(userid), currencyname: "LTC" });
-//         if (existingAddress) {
-//             console.log('LTC address already exists for this user.');
-//             return existingAddress;
-//         }
-
-//         const keyPair = bitcoin.ECPair.makeRandom({ network: network });
-
-//         // Generate a SegWit Bech32 address (P2WPKH)
-//         const { address: walletAddress } = bitcoin.payments.p2wpkh({
-//           pubkey: keyPair.publicKey,
-//           network: network,
-//         });
-
-//         // Validate address (throws if invalid)
-//         bitcoin.address.toOutputScript(walletAddress, network);
-//         console.log('Generated address is valid:', walletAddress);
-
-//         // Get WIF format private key
-//         const wif = keyPair.toWIF();
-
-//         // Save WIF to keystore JSON file
-//         const baseDir = path.join(__dirname, '../Keystore/');
-//         if (!fs.existsSync(baseDir)) {
-//           fs.mkdirSync(baseDir, { recursive: true });
-//         }
-//         const filePath = path.join(baseDir, walletAddress.toLowerCase() + '.json');
-//         await fs.promises.writeFile(filePath, JSON.stringify({ wif }), 'utf8');
-
-//         console.log("LTC Wallet Created Successfully!");
-
-//         // Save to DB
-//         const newAddress = new CoinAddress({
-//           user_id: userid,
-//           address: walletAddress,
-//           currencyname: 'LTC',
-//           encData: wif,
-//         });
-
-//         await newAddress.save();
-
-//         return newAddress;
-
-
-//     } catch (err) {
-//         console.error("LTC CreateAddress Error: ", err);
-//         throw err;
-//     }
-// };
-
-
-// exports.Deposit = async () => {
-//     try {
-//         console.log('Deposit function called for LTC');
-//         const adminKey = "cUVjZxURBtLrGmoj1KXYJvy6tYaDeikRVbF3Ck564NywaeTPWiot";
-//         const userAddress = "tltc1qjkna6kweklrmtcmz0hl27kjej98pswc6ft0uhd";
-//         const amount = 0.0001; // Amount in LTC
-//         await coinTransfer(adminKey, userAddress, amount);
-//     } catch (error) {
-//         console.log('Deposit Error:', error);
-//         return false;
-//     }
-// }
-
-
 exports.LtcDeposit = async (userid, symbol) => {
   try {
+    const userData = await userDb.findById({ _id: userid });
     // Get user's Litecoin address from database
-    const userAddress = await CoinAddress.findOne({ user_id: userid, currencyname: "LTC" });
+    const userAddress = await CoinAddress.findOne({ user_id: userid, currencyname: symbol });
     if (!userAddress) {
       return { success: false, message: "No Litecoin address found for this user.", count: 0 };
     }
 
     const walletAddress = userAddress.address;
+
+    let previousBlock = userAddress.ltcBlock?.ltc || 0;
+    let maxProcessedBlock = previousBlock;
+
     const { bitcoin: { addresses } } = mempoolJS({
       hostname: "litecoinspace.org",
+      network: process.env.NETWORK,
     });
 
+
     // fetch txs for this address
-    const addressTxs = await addresses.getAddressTxs({ walletAddress });
+    const addressTxs = await addresses.getAddressTxs({ address: walletAddress });
 
     if (!addressTxs || addressTxs.length === 0) {
       return { success: false, message: "No transactions found for LTC address", count: 0 };
     }
 
+    const sortedTxs = addressTxs.sort((a, b) => {
+      const timeA = a.status?.block_time || 0;
+      const timeB = b.status?.block_time || 0;
+      return timeA - timeB;
+    })
+
     let newDepositCount = 0;
 
-    for (let users of addressTxs) {
-      const toAddress = users.vout[0]?.scriptpubkey_address;
+    for (let users of sortedTxs) {
+      const blockHeight = users?.status?.block_height;
+      if (!blockHeight || blockHeight <= previousBlock) continue;
+      let toAddress;
+      let amount
+      for (const output of users.vout) {
+        if (output.scriptpubkey_address === walletAddress) {
+          toAddress = output.scriptpubkey_address;
+          amount = output.value;
+        } else {
+          continue;
+        }
+      }
       if (toAddress !== walletAddress) continue;
 
       // skip if already recorded
-      const existingDeposit = await CoinDeposit.findOne({ txnId: users.txid, type: "Deposit" });
+      const existingDeposit = await depositTransaction.findOne({ userId: new ObjectId(userid), txnId: users.txid, type: "Deposit" });
       if (existingDeposit) continue;
 
-      const createdDate = new Date(Number(users.locktime) * 1000);
+      const symbolName = symbol + "USDT";
+      const coinData = await Coindata.findOne({ symbol: symbolName });
+      const currentPrice = coinData?.current_price || 0;
+
+      const createdDate = new Date(Number(users?.status?.block_time) * 1000);
       const fromAddress = users.vin[0]?.prevout?.scriptpubkey_address || "";
-      const amount = users.vout[0]?.value || 0;
+      // const amount = users.vout[0]?.value || 0;
       const transferAmnt = amount / 1e8;
+      const usdAmount = parseFloat(currentPrice) * parseFloat(transferAmnt);
 
       // save deposit
-      const newDeposit = new CoinDeposit({
-        userId: userid,
+      const newDeposit = new depositTransaction({
+        userId: new ObjectId(userid),
         toaddress: toAddress,
         amount: transferAmnt,
         fromAddress,
@@ -306,7 +277,9 @@ exports.LtcDeposit = async (userid, symbol) => {
         type: "Deposit",
         txnId: users.txid,
         status: 1,
-        moveCur: "LTC",
+        moveCur: symbol,
+        currentDeposit_livePrice: currentPrice,
+        usdAmount,
         createdDate,
       });
 
@@ -314,7 +287,39 @@ exports.LtcDeposit = async (userid, symbol) => {
       if (saved?.status) {
         await userDepositUpdate(userid, transferAmnt, symbol);
         newDepositCount++;
+
+        const datas = fs.readFileSync(depositMail, "utf8");
+        let bodyData = datas.toString();
+        const getSitesetting = await siteSetting.findOne({});
+        const userName = userData.first_name || userData.email;
+        const emailCotent = `Your deposit of ${transferAmnt} ${symbol} has been successfully received and updated in your account.`;
+        const logoPosition = getSitesetting?.logoPosition || "center";
+        const copyright =
+          getSitesetting?.copyright ||
+          "© 2025 Rempic. All rights reserved.";
+        const chars = {
+          "{{UserName}}": userName,
+          "{{logoPosition}}": logoPosition,
+          "{{compName}}": copyright,
+          "{{compImage}}": `${config.Cloudinary_logo}`,
+          "{{EmailContent}}": emailCotent,
+          "{{TxnId}}": users.txid,
+        };
+        let emailBody = bodyData;
+        for (const key in chars) {
+          emailBody = emailBody.replace(new RegExp(key, "g"), chars[key]);
+        }
+        let subject = `New ${symbol} Deposit Received`;
+        PassMailSend(userData.email, subject, emailBody);
       }
+      maxProcessedBlock = Math.max(maxProcessedBlock, blockHeight);
+    }
+
+    if (maxProcessedBlock > previousBlock) {
+      await CoinAddress.updateOne(
+        { user_id: userid, currencyname: "LTC" },
+        { $set: { "ltcBlock.ltc": maxProcessedBlock } }
+      );
     }
 
     if (newDepositCount > 0) {
@@ -323,83 +328,30 @@ exports.LtcDeposit = async (userid, symbol) => {
       return { success: false, message: "No new LTC deposits found", count: 0 };
     }
   } catch (error) {
-    console.error("LtcDeposit Error:", error);
+    console.error("LtcDeposit Error:", error.message);
     return { success: false, message: "Internal Error", count: 0 };
   }
 };
 
 
-// exports.LtcDeposit = async (userid, symbol) => {
-//     try {
-//         // Get user's Litecoin Testnet address from database
-//         const userAddress = await CoinAddress.findOne({ user_id: userid, currencyname: "LTC" });
-//         if (!userAddress) {
-//             return res.send({ status: false, error: "No Litecoin address found for this user." });
-//         }
-
-//         const walletAddress = userAddress.address;
-//         const { bitcoin: { addresses } } = mempoolJS({
-//             hostname: 'litecoinspace.org'
-//         });
-
-//         const addressTxs = await addresses.getAddressTxs({ walletAddress });
-//         for (let users of addressTxs) {
-//             // console.log(users,"----users");
-//             const toAddress = users.vout[0].scriptpubkey_address
-//             if (toAddress == walletAddress) {
-
-//                 const existingDeposit = await CoinDeposit.findOne({ txnId: users.txid });
-//                 if (!existingDeposit) {
-//                     let createdDate = new Date(Number(users.locktime) * 1000);
-//                     const fromAddress = users.vin[0].prevout.scriptpubkey_address
-//                     const amount = users.vout[0].value
-//                     const transferAmnt = amount / 1e8
-//                     // if(transferAmnt > 0){
-//                     const newDeposit = new CoinDeposit({
-//                         userId: userid,
-//                         toaddress: toAddress,
-//                         amount: transferAmnt,
-//                         fromAddress: fromAddress,
-//                         fees: "",
-//                         type: "Deposit",
-//                         txnId: users.txid,
-//                         status: 1,
-//                         moveCur: "LTC",
-//                         createdDate: createdDate
-//                     });
-
-//                     await newDeposit.save();
-//                     await userDepositUpdate(userid, amount, symbol)
-//                 // }else{
-//                 //     return false;
-//                 // }
-//                 }
-//             }
-//         }
-
-//         return true;
-//     } catch (error) {
-//         console.error('CoinDeposit Error:', error);
-//         return false;
-//     }
-// };
-
-exports.LtcWithdraw = async (userId, data) => {
+exports.LtcWithdraw = async (userId, data, req) => {
   try {
     let adminAddress;
     const adminId = userId;
     const adminData = await adminUser.findOne({ _id: adminId });
     if (data.type == "approve") {
       if (adminData.admin_type == "SuperAdmin") {
-        adminAddress = await AdminSettings.findOne({ userId: userId }, { ltc_address: 1, ltc_key: 1 })
+        adminAddress = await AdminSettings.findOne({ userId: userId }, { ltc_address: 1, ltc_key: 1, ltc_seed: 1 })
       } else {
         adminAddress = await AdminSettings.findOne({});
       }
       let adminKey = await decryptionKey(adminAddress?.ltc_key);
-      const balance = await axios.get(`https://api.blockcypher.com/v1/ltc/main/addrs/${adminAddress.ltc_address}`)
-      const ltcBalance = balance.final_balance / 1e8
+      const mnemonic = await decryptionKey(adminAddress?.ltc_seed)
+      const resp = await axios.get(`${config.LTC_URL}address/${adminAddress.ltc_address}`)
+      let balance = resp.data.chain_stats.funded_txo_sum - resp.data.chain_stats.spent_txo_sum;
+      const ltcBalance = balance / 1e8
       if (parseFloat(ltcBalance) > parseFloat(data.amount)) {
-        const signed = await coinTransfer(adminKey, data.toaddress, data.amount)
+        const signed = await coinTransfer(adminKey, data.toaddress, data.amount, adminAddress.ltc_address, mnemonic)
         if (signed) {
           const LTCSaveData = await userHistory(data.id, adminAddress.ltc_address, signed, 2)
           const withdrawLTCUser = await userDb.findById({
@@ -456,193 +408,262 @@ exports.LtcWithdraw = async (userId, data) => {
       }
     } else if (data.type == "reject") {
       const totalAmnt = addExact(data.amount, data.fees)
-      await rejectUserRequest(data, totalAmnt)
+      await rejectUserRequest(data, totalAmnt, req, adminId)
       return { status: true, message: "Admin Rejected the User Request" };
     }
 
   } catch (error) {
-    console.error("Litecoin Withdraw Error:", error);
+    console.error("Litecoin Withdraw Error:", error.message);
     return false;
   }
 };
 
-const coinTransfer = async (key, toAddress, amount) => {
+async function getRecommendedFeeRate() {
+  const res = await axios.get("https://mempool.space/api/v1/fees/recommended");
+  return res.data.fastestFee;
+}
+
+async function fetchRawTxHex(utxo) {
   try {
-    // const privateKey = litecoin.PrivateKey.fromWIF(key);
-    // const fromAddress = privateKey.toAddress(network).toString();
-    const keyPair = bitcoin.ECPair.fromWIF(
-      key,
-      network
-    );
+    const txUrl = `${config.LTC_URL}tx/${utxo.txId}/hex`;
+    const response = await axios.get(txUrl);
+    return response.data;
+  } catch (error) {
+    console.log("LTC fetchRawTxHex", error);
+  }
+}
 
-    const { address } = bitcoin.payments.p2wpkh({
-      pubkey: keyPair.publicKey,
-      network: network,
+const buildLitecoinTx = async ({
+  key,
+  utxos,
+  toAddress,
+  amountSats,
+  fromAddress,
+  feeSats,
+  mnemonic
+}) => {
+  try {
+    const keyPair = ECPair.fromWIF(key, network);
+    const pubkey = keyPair.publicKey;
+    const p2wpkh = bitcoin.payments.p2wpkh({ pubkey, network });
+    const p2sh = bitcoin.payments.p2sh({ redeem: p2wpkh, network });
+    const p2pkh = bitcoin.payments.p2pkh({ pubkey, network });
+
+
+    // detect Taproot
+    const xOnlyPubkey = pubkey.slice(1, 33);
+    const p2tr = bitcoin.payments.p2tr({
+      internalPubkey: xOnlyPubkey,
+      network,
     });
-    const fromAddress = address;
 
-    // console.log(fromAddress, "fromAddress>>>>>")
-    const res = await axios.get(`https://litecoinspace.org/api/address/${fromAddress}/utxo`);
-    const utxosData = res.data;
+    const psbt = new bitcoin.Psbt({ network });
+
+    // detect input type by address prefix
+    const addr = fromAddress;
+    let tweakedChildNode;
+    let TaprootStatus = false;
+    for (const utxo of utxos) {
+      if (/^(L|M|m|n)/.test(addr)) {
+        let rawTxHex = await fetchRawTxHex(utxo);
+        // Legacy P2PKH
+        psbt.addInput({
+          hash: utxo.txId,
+          index: utxo.vout,
+          nonWitnessUtxo: Buffer.from(rawTxHex, "hex"),
+        });
+      } else if (/^(3|2|Q)/.test(addr)) {
+        // P2SH-P2WPKH
+        psbt.addInput({
+          hash: utxo.txId,
+          index: utxo.vout,
+          witnessUtxo: {
+            script: p2sh.output,
+            value: BigInt(utxo.value),
+          },
+          redeemScript: p2sh.redeem.output,
+        });
+      } else if (/^(ltc1q|tltc1q)/.test(addr)) {
+        // Native SegWit P2WPKH
+        psbt.addInput({
+          hash: utxo.txId,
+          index: utxo.vout,
+          witnessUtxo: {
+            script: p2wpkh.output,
+            value: BigInt(utxo.value),
+          },
+        });
+      } else if (/^(ltc1p|tltc1p)/.test(addr)) {
+        // Taproot P2TR
+        const seed = await bip39.mnemonicToSeed(mnemonic);
+        const rootKey = bip32.fromSeed(seed, network);
+        const path = `m/86'/2'/0'/0/0`;
+        const childNode = rootKey.derivePath(path);
+        const childNodeXOnlyPubkey = bitcoin.toXOnly(xOnlyPubkey);
+        assert.deepEqual(childNodeXOnlyPubkey, xOnlyPubkey);
+        assert(p2tr.output);
+        assert.strictEqual(p2tr.address, addr);
+        tweakedChildNode = childNode.tweak(
+          bitcoin.crypto.taggedHash("TapTweak", childNodeXOnlyPubkey)
+        );
+        TaprootStatus = true;
+        psbt.addInput({
+          hash: utxo.txId,
+          index: utxo.vout,
+          witnessUtxo: {
+            script: p2tr.output,
+            value: BigInt(utxo.value),
+          },
+          tapInternalKey: bitcoin.toXOnly(xOnlyPubkey),
+        });
+      } else {
+        throw new Error("Unsupported address type: " + addr);
+      }
+    }
+    // output (recipient)
+    psbt.addOutput({
+      address: toAddress,
+      value: BigInt(amountSats),
+    });
+
+    // Calculate change
+    const inputTotal = utxos.reduce((sum, utxo) => sum + utxo.value, 0);
+    const change = inputTotal - amountSats - feeSats;
+
+    if (change > 0) {
+      psbt.addOutput({ address: addr, value: BigInt(change) });
+    }
+
+    // sign (Taproot requires Schnorr backend)
+     utxos.forEach((_, idx) => {
+      psbt.signInput(idx, TaprootStatus ? tweakedChildNode : keyPair);
+    });
+
+    // const validator = (pubkey, msghash, signature) => {
+    //   try {
+    //     return ECPair.fromPublicKey(pubkey).verify(msghash, signature); // <-- ECDSA for P2PKH
+    //   } catch {
+    //     return false;
+    //   }
+    // };
+
+    function validator(pubkey, msghash, sig) {
+      try {
+        if (pubkey.length === 32) {
+          const full = Buffer.concat([Buffer.from([0x02]), pubkey]);
+          return ECPair.fromPublicKey(full).verifySchnorr(msghash, sig);
+        }
+
+        return ECPair.fromPublicKey(pubkey).verify(msghash, sig);
+      } catch (err) {
+        console.error("Validator error:", err.message);
+        return false;
+      }
+    }
+    let isValid = false;
+    for (let i = 0; i < psbt.inputCount; i++) {
+      isValid = psbt.validateSignaturesOfInput(i, validator);
+    }
+
+    if (isValid) {
+      psbt.finalizeAllInputs();
+      const rawTx = psbt.extractTransaction().toHex();
+
+      return rawTx;
+    } else {
+      console.log("❌ Transaction aborted due to invalid signature.");
+    }
+  } catch (error) {
+    console.log(error.message)
+  }
+};
+
+function estimateTxFee(numInputs, numOutputs, feeRate = 10) {
+  const size = numInputs * 148 + numOutputs * 34 + 10;
+  return size * feeRate; // satoshis
+}
+
+function selectUTXOs(utxos, amountSats, feeSats) {
+  let total = 0;
+  const selected = [];
+
+  for (const utxo of utxos) {
+    selected.push(utxo);
+    total += utxo.value;
+    if (total >= amountSats + feeSats) break;
+  }
+
+  if (total < amountSats + feeSats)
+    throw new Error("Insufficient balance to cover amount + fee");
+
+  return { selected, total };
+
+}
+
+async function getUTXOs(fromAddress) {
+  const url = `${config.LTC_URL}address/${fromAddress}/utxo`;
+  const response = await axios.get(url);
+  return response.data || [];
+}
+
+const coinTransfer = async (key, toAddress, amount, fromAddress, mnemonic) => {
+  try {
+    const amountSats = Math.round(amount * 1e8);
+    const utxosData = await getUTXOs(fromAddress);
 
     if (!utxosData.length) {
       console.log("No UTXOs found. Please send LTC to this address first.");
       return false;
     }
 
-    // Convert to UTXO format required by litecore-lib
-    const utxos = utxosData.map((utxo) => ({
-      txId: utxo.txid,
-      outputIndex: utxo.output_no,
+    const utxos = utxosData.map(u => ({
+      txId: u.txid,
+      vout: u.vout,
       address: fromAddress,
-      script: litecoin.Script.buildPublicKeyHashOut(fromAddress).toString(),
-      satoshis: Math.floor(parseFloat(utxo.value) * 1e8), // convert LTC to satoshis
+      value: u.value,
     }));
 
-    const amountToSend = amount * 1e8;
-    const fee = 10000;
+    const feeRate = await getRecommendedFeeRate(); // e.g., 20 sat/vB
 
-    const transaction = new litecoin.Transaction()
-      .from(utxos)
-      .to(toAddress, amountToSend)
-      .fee(fee)
-      .change(fromAddress)
-      .sign(privateKey);
+    // Step 3: Estimate fee based on max needed inputs
+    const numInputs = utxos.length;
+    const numOutputs = 2; // recipient + change
+    const estimatedFee = estimateTxFee(numInputs, numOutputs, feeRate);
 
-    const rawTx = transaction.serialize();
-    // console.log("Raw Transaction Hex:", rawTx);
-    return rawTx;
+    // Step 4: Select UTXOs that cover amount + estimated fee
+    const { selected, total } = selectUTXOs(utxos, amountSats, estimatedFee);
+
+    // Step 5: Fetch raw hex for selected UTXOs
+    const selectedWithHex = await Promise.all(
+      selected.map(async (utxo) => ({
+        ...utxo,
+        rawTxHex: await fetchRawTxHex(utxo),
+      }))
+    );
+
+    // Step 6: Final fee estimation using selected inputs
+    const feeSats = estimateTxFee(
+      selectedWithHex.length,
+      numOutputs,
+      feeRate
+    );
+
+    const rawTx = await buildLitecoinTx({ key, utxos, toAddress, amountSats, fromAddress, feeSats, mnemonic })
+
+    const broadcast = await axios.post(
+      `${config.LTC_URL}tx`,
+      rawTx,
+      {
+        headers: { "Content-Type": "text/plain" }
+      }
+    );
+
+    return broadcast.data;
   } catch (error) {
     console.error('coin Transfer Error:', error.message);
     return false;
   }
 }
-
-// const coinTransfer = async (key, toAddress, amount) => {
-//     try {
-//         const privateKey = "ce4e7eabe38c183cd3bc41f555e26321ea05368f7620078e1dd3fcb99df28b54";
-//         console.log(network, "network");
-//         // const fromAddress = privateKey.toAddress(network).toString();
-//         // console.log(fromAddress, "fromAddress");
-
-//         const res = await axios.get(`https://litecoinspace.org/testnet/api/address/tltc1ql2qvdctfwe6qr8lxlnk66gqtu4hplau85sx9u6/utxo`);
-//         const utxosData = res.data;
-//         console.log("UTXOs Data:", utxosData);
-
-//         if (!utxosData.length) {
-//             console.log("No UTXOs found.");
-//             return false;
-//         }
-
-//         const utxos = utxosData.map((utxo) => ({
-//             txId: utxo.txid,
-//             outputIndex: utxo.vout,
-//             address: "tltc1ql2qvdctfwe6qr8lxlnk66gqtu4hplau85sx9u6",
-//             script: litecoin.Script.buildPublicKeyHashOut("tltc1ql2qvdctfwe6qr8lxlnk66gqtu4hplau85sx9u6").toString(), 
-//             satoshis: utxo.value, 
-//         }));
-//         console.log("UTXOs:", utxos);
-
-
-//         const amountToSend = amount * 1e8;
-//         const fee = 10000;
-//         const total = utxos.reduce((sum, u) => sum + u.satoshis, 0);
-//         if (total < amountToSend + fee) {
-//             console.error("Insufficient balance.");
-//             return false;
-//         }
-
-//         const transaction = new litecoin.Transaction()
-//             .from(utxos)
-//             .to(toAddress, amountToSend)
-//             .fee(fee)
-//             .change("tltc1ql2qvdctfwe6qr8lxlnk66gqtu4hplau85sx9u6")
-//             .sign(privateKey);
-
-//         const rawTx = transaction.serialize();
-//         console.log("Raw Transaction Hex:", rawTx);
-
-//         // Broadcast it (optional)
-//         // await axios.post(`https://litecoinspace.org/testnet/api/tx/send`, { rawtx: rawTx });
-
-//         return rawTx;
-//     } catch (error) {
-//         console.error("Transfer error:", error.message);
-//         return false;
-//     }
-// }
-
-// Admin Move
-
-
-// const coinTransfer = async (wif, toAddress, amount) => {
-//   try {
-//     const keyPair = bitcoin.ECPair.fromWIF(wif, network);
-
-//     const { address: fromAddress } = bitcoin.payments.p2wpkh({
-//       pubkey: keyPair.publicKey,
-//       network,
-//     });
-//     console.log(await axios.get(`https://api.blockcypher.com/v1/ltc/test3/addrs/tltc1ql2qvdctfwe6qr8lxlnk66gqtu4hplau85sx9u6/balance`))
-
-//     const res = await axios.get(`https://litecoinspace.org/api/address/${fromAddress}/utxo`);
-//     console.log(res,"res>>>>>>>>>>>")
-//     const utxos = res.data;
-
-//     if (!utxos.length) {
-//       console.log("No UTXOs found.");
-//       return false;
-//     }
-
-//     const psbt = new bitcoin.Psbt({ network });
-
-//     let inputAmount = 0;
-//     const satoshisToSend = Math.floor(amount * 1e8);
-//     const fee = 10000; 
-
-//     for (const utxo of utxos) {
-//       psbt.addInput({
-//         hash: utxo.txid,
-//         index: utxo.output_no,
-//         witnessUtxo: {
-//           script: bitcoin.payments.p2wpkh({ pubkey: keyPair.publicKey, network }).output,
-//           value: Math.floor(parseFloat(utxo.value) * 1e8),
-//         },
-//       });
-//       inputAmount += Math.floor(parseFloat(utxo.value) * 1e8);
-//       if (inputAmount >= satoshisToSend + fee) break;
-//     }
-
-//     if (inputAmount < satoshisToSend + fee) {
-//       console.log("Insufficient balance.");
-//       return false;
-//     }
-
-//     psbt.addOutput({
-//       address: toAddress,
-//       value: satoshisToSend,
-//     });
-
-//     const change = inputAmount - satoshisToSend - fee;
-//     if (change > 0) {
-//       psbt.addOutput({
-//         address: fromAddress,
-//         value: change,
-//       });
-//     }
-
-//     psbt.signAllInputs(keyPair);
-//     psbt.finalizeAllInputs();
-
-//     const rawTx = psbt.extractTransaction().toHex();
-//     console.log("Raw Transaction:", rawTx);
-//     return rawTx;
-
-//   } catch (err) {
-//     console.error("Transaction Error:", err.message);
-//     return false;
-//   }
-// };
 
 
 exports.Ltc_adminMove = async (ip, adminId, symbol, req) => {
@@ -659,12 +680,20 @@ exports.Ltc_adminMove = async (ip, adminId, symbol, req) => {
       const users = await CoinAddress.findOne({ address: userAddress, currencyname: symbol }, { encData: 1 })
       const userPrivateKey = users.encData
 
-      const balance = await axios.get(`https://api.blockcypher.com/v1/ltc/main/addrs/${userAddress}`)
-      const ltcBalance = balance.final_balance / 1e8
-      if (parseFloat(ltcBalance) > parseFloat(rpcUrl.ltcconfig.minBal)) {
-        const totalAmnt = Number(ltcBalance) - Number(rpcUrl.ltcconfig.minBal)
+      const resp = await axios.get(`${config.LTC_URL}address/${userAddress}`)
+      let balance = resp.data.chain_stats.funded_txo_sum - resp.data.chain_stats.spent_txo_sum;
+      let utxos = await getUTXOs(userAddress);
+      if (utxos.length === 0) continue;
+      const feeRate = await getRecommendedFeeRate();
 
-        const signed = await coinTransfer(userPrivateKey, adminAddress, totalAmnt)
+      const numInputs = utxos.length;
+      const numOutputs = 2;
+      const estimatedFee = estimateTxFee(numInputs, numOutputs, feeRate);
+      const ltcBalance = (balance - estimatedFee) / 1e8;
+      if (parseFloat(ltcBalance) >= parseFloat(rpcUrl.ltcconfig.minBal)) {
+        const totalAmnt = Number(ltcBalance)
+
+        const signed = await coinTransfer(userPrivateKey, adminAddress, totalAmnt, userAddress)
         if (signed) {
           await adminHistory(userAddress, adminAddress, totalAmnt, symbol, signed)
           await adminMovedStatus(userAddress, symbol)

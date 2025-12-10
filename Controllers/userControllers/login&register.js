@@ -100,6 +100,12 @@ class login_register {
   user_Register = async (req, res) => {
     const { first_name, last_name, email, password, referral_id } = req.body;
     try {
+      if (!first_name || !last_name || !email || !password) {
+        return res.send({
+          status: false,
+          message: "First name, last name, email and password are required.",
+        });
+      }
       const existingEmail = await userModule.findOne({ email: email });
       const getSitesetting = await SiteSetting.findOne({});
       // console.log("getSitesetting", getSitesetting);
@@ -738,7 +744,7 @@ class login_register {
         if (existingEmail.account_status == "Deleted") {
           return res.send({ status: false, message: "Your Account has been Deleted" });
         }
-        
+
         return res.send({ status: false, message: "Email Already Exists.." });
       }
 
@@ -1050,32 +1056,32 @@ class login_register {
         user_email: userDetail.email,
         ...kycData,
       };
-      const individual = {
-        ...existingIndividual?.individuals,
-        dob: kycData?.birth_information?.[0]?.birthday,
-        citizenship: kycData?.KYC_document?.[0]?.citizenship
-      }
-      console.log(individual)
-      const formData = {
-        user_id: id,
-        user_email: userDetail.email,
-        individuals: individual
-      };
+      // const individual = {
+      //   ...existingIndividual?.individuals,
+      //   dob: kycData?.birth_information?.[0]?.birthday,
+      //   citizenship: kycData?.KYC_document?.[0]?.citizenship
+      // }
+      // console.log(individual)
+      // const formData = {
+      //   user_id: id,
+      //   user_email: userDetail.email,
+      //   individuals: individual
+      // };
 
-      const updateFormData = {
-        individuals: individual
-      };
+      // const updateFormData = {
+      //   individuals: individual
+      // };
 
-      if (!existingIndividual) {
-        const individualform = new userIndiviuals(formData);
-        await individualform.save();
-      } else {
-        const updateIndividual = await userIndiviuals.findOneAndUpdate(
-          { user_id: id },
-          { $set: updateFormData },
-          { new: true }
-        );
-      }
+      // if (!existingIndividual) {
+      //   const individualform = new userIndiviuals(formData);
+      //   await individualform.save();
+      // } else {
+      //   const updateIndividual = await userIndiviuals.findOneAndUpdate(
+      //     { user_id: id },
+      //     { $set: updateFormData },
+      //     { new: true }
+      //   );
+      // }
 
       if (!existingKyc) {
         const kycCreateform = new kycUserData(kycFormData);
@@ -1292,6 +1298,7 @@ class login_register {
       const existingIndivUser = await userIndiviuals.findOne({ user_id: id });
 
       let individualsData = {};
+      let message = "";
       if (datas.type == "individuals" && datas.individualStatus == 0) {
         individualsData = {
           ...existingIndivUser?.individuals,
@@ -1300,6 +1307,7 @@ class login_register {
           citizenship: datas.citizenship,
           actual_address: datas.actual_address,
         }
+        message = "Personal information"
       } else if (datas.type == "individuals" && datas.individualStatus == 1) {
         individualsData = {
           ...existingIndivUser?.individuals,
@@ -1313,6 +1321,7 @@ class login_register {
             other_option: datas.other_option
           }
         }
+        message = "ID or Passport information"
       } else if (datas.type == "individuals" && datas.individualStatus == 2) {
         individualsData = {
           ...existingIndivUser?.individuals,
@@ -1341,6 +1350,7 @@ class login_register {
             purposeofusingrempic: datas.purposeofusingrempic
           }
         };
+        message = "KYC/ Due diligence Form"
       }
 
       const formData = {
@@ -1361,7 +1371,7 @@ class login_register {
         if (createIndividual) {
           res.send({
             status: true,
-            message: "User Data Created Successfully...",
+            message: `${message} Data Created Successfully`,
           });
         } else {
           res.send({ status: false, message: "User Data Failed to Create..." });
@@ -1376,7 +1386,7 @@ class login_register {
         if (updateIndividual) {
           res.send({
             status: true,
-            message: "User Data Updated Successfully...",
+            message: `${message} Data Updated Successfully`,
             data: updateIndividual.individualStatus,
           });
         } else {

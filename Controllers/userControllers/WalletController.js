@@ -258,7 +258,7 @@ const adminWithdrawProcess = async (req, res) => {
         withdrawResult = await SOL.SolanaWithdraw(userId, data, req);
         break;
       case "LTC":
-        withdrawResult = await LTC.LtcWithdraw(userId, data);
+        withdrawResult = await LTC.LtcWithdraw(userId, data, req);
         break;
       case "ADA":
         withdrawResult = await ADA.AdaWithdraw(userId, data, req);
