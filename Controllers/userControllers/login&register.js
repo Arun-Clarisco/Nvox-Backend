@@ -108,17 +108,27 @@ class login_register {
       }
       const existingEmail = await userModule.findOne({ email: email });
       const getSitesetting = await SiteSetting.findOne({});
-      // console.log("getSitesetting", getSitesetting);
+        const name = email.split("@")[0];
+        console.log("getSitesetting", getSitesetting);
+        // return; 
 
       const expireTimeInMinutes = getSitesetting?.expireTime || 5;
       const emailContent =
         getSitesetting?.emailContent || "This is your Mail Verification OTP";
+         console.log("emailContent", emailContent); 
       const copyright =
         getSitesetting?.copyright || "© 2025 Rempic. All rights reserved.";
       const logo = getSitesetting?.logo || Config.Cloudinary_logo;
       const emailSubject = getSitesetting?.emailSubject || "Email Verification";
+      console.log("emailSubject", emailSubject);   
+
       const logoPosition = getSitesetting?.logoPosition || 'center';
-      const lastLine = getSitesetting?.lastLine || "";
+
+      const userName = name || "User"; 
+      console.log("userName", userName);   
+      //return; 
+
+    //  const lastLine = getSitesetting?.lastLine || "";
 
       if (existingEmail) {
         return res.send({ status: false, message: "Email Already Exists.." });
@@ -139,15 +149,17 @@ class login_register {
 
       const data = fs.readFileSync(emailOTP, "utf8");
       let bodyData = data.toString();
+      const formattedEmailContent = emailContent.replace(/\n/g, "<br/>");
 
       const placeholders = {
         "{{validOTP}}": OTP,
-        "{{EmailContent}}": emailContent,
+        "{{EmailContent}}": formattedEmailContent,
         "{{ExpTime}}": expireTimeInMinutes,
         "{{compName}}": copyright,
         "{{compImage}}": logo,
         "{{logoPosition}}": logoPosition,
-        "{{lastLine}}": lastLine
+        "{{userName}}": userName,
+        // "{{lastLine}}": lastLine
       };
       bodyData = bodyData.replace(
         /{{validOTP}}/g,
@@ -170,10 +182,15 @@ class login_register {
         /{{logoPosition}}/g,
         placeholders["{{logoPosition}}"]
       );
-      bodyData = bodyData.replace(
-        /{{lastLine}}/g,
-        placeholders["{{lastLine}}"]
+        bodyData = bodyData.replace(
+         /{{userName}}/g,
+         placeholders["{{userName}}"]
       );
+      
+      // bodyData = bodyData.replace(
+      //   /{{lastLine}}/g,
+      //   placeholders["{{lastLine}}"]
+      // );
 
       const subject = emailSubject;
       forgetPassMailSend(email, subject, bodyData);
@@ -185,7 +202,8 @@ class login_register {
       });
       return res.send({ encryptedData: encryptedResponse });
       // return res.send({ status: true, message: "OTP sent to your email for verification", token });
-    } catch (error) {
+    } catch (error) { 
+      console.log("error---", error); 
       return res
         .status(500)
         .send({ status: false, message: "Internal Error..." });
@@ -1659,7 +1677,7 @@ class login_register {
   changepassword = async (req, res) => {
     const id = res.locals.user_id;
     const { oldpassword, newPassWord, confirmPassWord } = req.body;
-    try {
+    try { 
       const users = await userModule.findOne({ _id: id });
       const userPass = users.password;
       const bytes = CryptoJS.AES.decrypt(userPass, Config.userEncrypt);
