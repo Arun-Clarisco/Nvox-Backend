@@ -70,59 +70,102 @@ class getMethods {
     }
   };
   // kyc data
+  // kycGetData = async (req, res) => {
+  //   const id = res.locals.user_id;
+
+  //   try {
+  //     await kycUserData
+  //       .findOne({ user_id: id })
+  //       .then((resp) => {
+  //         // console.log('resp', resp)
+  //         res.send({ status: true, message: "Get the KYC Data", resp });
+  //       })
+  //       .catch(() => {
+  //         res.send({ status: false, message: "Cannot Get the KYC Data" });
+  //       });
+  //   } catch (error) {
+  //     res.send({ status: false, message: "Something Went Wrong.." });
+  //   }
+  // };
+
   kycGetData = async (req, res) => {
     const id = res.locals.user_id;
 
     try {
-      await kycUserData
-        .findOne({ user_id: id })
-        .then((resp) => {
-          // console.log('resp', resp)
-          res.send({ status: true, message: "Get the KYC Data", resp });
-        })
-        .catch(() => {
-          res.send({ status: false, message: "Cannot Get the KYC Data" });
-        });
+      const resp = await kycUserData.findOne({ user_id: id });
+
+      if (!resp) {
+        return res.send({ status: false, message: "KYC Data not found" });
+      }
+
+      res.send({ status: true, message: "Get the KYC Data", resp });
     } catch (error) {
-      res.send({ status: false, message: "Something Went Wrong.." });
+      console.error(error);
+      res.send({ status: false, message: "Something went wrong" });
     }
   };
 
 
   getPhoneData = async (req, res) => {
-    const email = req.query.email;
+    const { email } = req.query;
+
+    if (!email) {
+      return res.send({ status: false, message: "Email is required", resp: [] });
+    }
 
     try {
-      if (email && email !== "" && email !== "null" && email !== "undefined") {
-        await SignUpVerifyPhone
-          .findOne({ user_email: email })
-          .then((resp) => {
-            res.send({ status: true, message: "Get the KYC Data", resp });
-          })
-          .catch(() => {
-            res.send({ status: false, message: "Cannot Get the KYC Data" });
-          });
-      } else {
-        res.send({ status: false, message: "Get the KYC Data", resp: [] });
+      const resp = await SignUpVerifyPhone.findOne({ user_email: email });
+
+      if (!resp) {
+        return res.send({ status: false, message: "Phone data not found", resp: [] });
       }
 
+      res.send({ status: true, message: "Get the phone data", resp });
     } catch (error) {
-      res.send({ status: false, message: "Something Went Wrong.." });
+      console.error(error);
+      res.send({ status: false, message: "Something went wrong" });
     }
   };
+
+  // getPhoneData = async (req, res) => {
+  //   const email = req.query.email;
+
+  //   try {
+  //     if (email && email !== "" && email !== "null" && email !== "undefined") {
+  //       await SignUpVerifyPhone
+  //         .findOne({ user_email: email })
+  //         .then((resp) => {
+  //           res.send({ status: true, message: "Get the KYC Data", resp });
+  //         })
+  //         .catch(() => {
+  //           res.send({ status: false, message: "Cannot Get the KYC Data" });
+  //         });
+  //     } else {
+  //       res.send({ status: false, message: "Get the KYC Data", resp: [] });
+  //     }
+
+  //   } catch (error) {
+  //     res.send({ status: false, message: "Something Went Wrong.." });
+  //   }
+  // };
 
   // individual data
   IndivGetData = async (req, res) => {
     const id = res.locals.user_id;
+
+    if (!id) {
+      res.send({ status: false, message: "Id not found", resp: [] });
+    }
     try {
-      await userIndiviuals
-        .findOne({ user_id: id })
-        .then((resp) => {
-          res.send({ status: true, message: "Individual Data", resp });
-        })
-        .catch(() => {
-          res.send({ status: false, message: "Cannot Get the Data" });
-        });
+
+      const resp = await userIndiviuals.findOne({ user_id: id });
+
+      if (!resp) {
+        res.send({ status: false, message: "Id not found", resp: [] });
+      }
+
+      res.send({ status: true, message: "Individual Data", resp });
+
     } catch (error) {
       res.send({ status: false, message: "Something Went Wrong.." });
     }
@@ -1298,7 +1341,7 @@ class getMethods {
   getAccountStatus = async (req, res) => {
     try {
       const id = res.locals.user_id;
-      const userData = await userModule.findOne({ _id: id });      
+      const userData = await userModule.findOne({ _id: id });
 
       if (!id) {
         return res.send({ status: false, message: "Invalid User Login..." });
