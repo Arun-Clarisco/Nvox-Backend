@@ -4,10 +4,8 @@ const cors = require("cors")
 const path = require('path');
 const cookieParser = require('cookie-parser');
 const logger = require('morgan');
-const Config = require('./Config/config')
 const adminRouter = require('./routes/adminRoute');
 const usersRouter = require('./routes/userRoute');
-const config = require('./Config/config');
 const app = express();
 const socketCommon = require('./Controllers/socket/socketCommon')
 const http = require('http');
@@ -19,10 +17,8 @@ const server = http.createServer(app);
 require("./db");
 require("./helper/cron.helper")
 app.use(logger('dev'));
-// app.use(express.json());
 app.use(cors());
 app.set("view engine", "jade");
-// app.use(express.urlencoded({ extended: false }));
 app.use(cookieParser());
 app.use(express.static(path.join(__dirname, 'public')));
 app.set("view engine", "jade")

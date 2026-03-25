@@ -7,15 +7,11 @@ const kycVerify = require("../Controllers/userControllers/SDK")
 const userAuth = require("../Auth/userAuth");
 const mobileAppRoute = require('../Controllers/userControllers/mobileAppRoute');
 const SocketData = require("../Controllers/userControllers/trade")
-const ltcAddrress = require('../CoinTransaction/LTC');
 const WalletController = require("../Controllers/userControllers/WalletController");
 const Transak = require("../Controllers/userControllers/buy&sell");
 const securityAuth = require('../Auth/securityAuth')
 const notificationController = require('../Controllers/userControllers/notificationController')
-const EthAddressCreate = require("../CoinTransaction/ETH");
-const AdaCreateAddress = require('../CoinTransaction/ADA');
 const SupportTicketController = require('../Controllers/userControllers/SupportTicketController')
-const userControl = require('../Controllers/userControllers/userController'); 
 const TwoAuthController = require("../Controllers/userControllers/TwofAauthenticate/TwoAuthEnableDisable");   
 
 
@@ -75,6 +71,10 @@ router.post("/user-register-mobile-otp", usersData.register_Phone_otp);
 // KYC Verification 
 router.post("/user-generateSDK", userAuth.verifyToken, kycVerify.verifyKyc);
 router.post("/user-verifyStatus", userAuth.verifyToken, kycVerify.statusCheck);
+
+router.post("/send-email-otp",userAuth.verifyToken,usersData.sendEmailOTP);
+router.post("/verify-email-otp",userAuth.verifyToken,usersData.verifyEmailOTP);
+router.post ("/verify-2fa-otp", userAuth.verifyToken, usersData.TfaCodeVerify);
 
 
 // Get Methods

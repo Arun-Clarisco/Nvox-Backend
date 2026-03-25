@@ -18,6 +18,10 @@ const emailOTP = path.resolve(
   "../EmailTemplates/mailBody/mailOTP.txt"
 );
 const axios = require("axios");
+const withdrawOTP = path.resolve(
+  __dirname,
+  "../EmailTemplates/mailBody/withdrawOTP.txt"
+);
 const twilio = require("twilio");
 const client = twilio(Config.Account_SID, Config.Auth_Token);
 const { encryptData, decryptData } = require("../../Config/Security");
@@ -29,6 +33,7 @@ const socketHelper = require("../socket/socketCommon");
 const { activeSession, pendingSession, userSocketMap } = require("../../Auth/userAuth");
 const SignUpVerifyPhone = require("../../Modules/userModule/PhoneVerification");
 const UsedToken = require("../../Modules/userModule/UsedToken");
+const speakeasy = require("speakeasy");
 
 const transporter = nodemailer.createTransport({
   host: `${Config.SMTP_Host}`,
@@ -61,7 +66,6 @@ const forgetPassMailSend = (to, sub, emailBody) => {
       subject: `${sub}`,
       html: `${emailBody}`,
     };
-    // console.log("mailOptions--", mailOptions);
 
     transporter.sendMail(mailOptions, (err, info) => {
       if (err) {
@@ -75,25 +79,6 @@ const forgetPassMailSend = (to, sub, emailBody) => {
   }
 };
 
-// const mailVerifiedStatus = async (req, res) => {
-//     try {
-//       const { token } = req.body;
-//       let tokenStatus = jwt.verify(token, Config.MAIL_CONFIRM_SECRET)
-//       let user = await userModule.findOneAndUpdate({ _id: tokenStatus.userId }, {
-//         $set: {
-//           emailVerifyStatus: 1
-//         }
-//       })
-//       res.send({ status: true, message: "Mail verified..." });
-//     } catch (error) {
-//       if (error.name === 'TokenExpiredError') {
-//         res.send({ status: false, message: "Mail expired" });
-//       } else {
-//         console.log("Token verification failed:", error.message);
-//         res.send({ status: false, message: "Something went wrong..!" });
-//       }
-//     }
-//   }
 
 class login_register {
   // Register
@@ -108,34 +93,22 @@ class login_register {
       }
       const existingEmail = await userModule.findOne({ email: email });
       const getSitesetting = await SiteSetting.findOne({});
-        const name = email.split("@")[0];
-        console.log("getSitesetting", getSitesetting);
-        // return; 
-
+      const name = email.split("@")[0];
       const expireTimeInMinutes = getSitesetting?.expireTime || 5;
       const emailContent =
         getSitesetting?.emailContent || "This is your Mail Verification OTP";
-         console.log("emailContent", emailContent); 
       const copyright =
         getSitesetting?.copyright || "© 2025 Rempic. All rights reserved.";
       const logo = getSitesetting?.logo || Config.Cloudinary_logo;
       const emailSubject = getSitesetting?.emailSubject || "Email Verification";
-      console.log("emailSubject", emailSubject);   
-
       const logoPosition = getSitesetting?.logoPosition || 'center';
-
-      const userName = name || "User"; 
-      console.log("userName", userName);   
-      //return; 
-
-    //  const lastLine = getSitesetting?.lastLine || "";
+      const userName = name || "User";
 
       if (existingEmail) {
         return res.send({ status: false, message: "Email Already Exists.." });
       }
 
       const OTP = Math.floor(100000 + Math.random() * 900000);
-      // console.log("OTPregis", OTP);
 
       const token = jwt.sign(
         { verifyOTP: OTP, first_name, last_name, email, password, referral_id },
@@ -144,9 +117,6 @@ class login_register {
       );
 
       const Token = jwt.verify(token, Config.MAIL_CONFIRM_SECRET);
-      // console.log(Token.exp, "initialToken.exp");
-      // console.log(Token.iat, "initialToken.iat");
-
       const data = fs.readFileSync(emailOTP, "utf8");
       let bodyData = data.toString();
       const formattedEmailContent = emailContent.replace(/\n/g, "<br/>");
@@ -182,11 +152,11 @@ class login_register {
         /{{logoPosition}}/g,
         placeholders["{{logoPosition}}"]
       );
-        bodyData = bodyData.replace(
-         /{{userName}}/g,
-         placeholders["{{userName}}"]
+      bodyData = bodyData.replace(
+        /{{userName}}/g,
+        placeholders["{{userName}}"]
       );
-      
+
       // bodyData = bodyData.replace(
       //   /{{lastLine}}/g,
       //   placeholders["{{lastLine}}"]
@@ -201,9 +171,8 @@ class login_register {
         token,
       });
       return res.send({ encryptedData: encryptedResponse });
-      // return res.send({ status: true, message: "OTP sent to your email for verification", token });
-    } catch (error) { 
-      console.log("error---", error); 
+    } catch (error) {
+      console.log("error---", error);
       return res
         .status(500)
         .send({ status: false, message: "Internal Error..." });
@@ -229,9 +198,6 @@ class login_register {
       }
 
       const currentTimestamp = Math.floor(Date.now() / 1000);
-      // console.log(currentTimestamp, "currentTimestamp");
-      // console.log(decodedToken.exp, "decodedToken.exp");
-      // console.log(decodedToken.iat, "decodedToken.iat");
 
       if (currentTimestamp > decodedToken.exp) {
         return res.send({
@@ -274,16 +240,12 @@ class login_register {
   // Resend Mail OTP
   resendMailOTP = async (req, res) => {
     const data = req.body;
-    // console.log(req.body, " req.body");
 
     try {
       const getSitesetting = await SiteSetting.findOne({});
-      // console.log("getSitesetting", getSitesetting);
-
-      // const expireTimeInMinutes = getSitesetting?.expireTime || 5;
+      const name = data.email.split("@")[0];
       const resendOTPExpireTimeInMinutes =
         getSitesetting?.resendOTPexpireTime || 2;
-
       const emailContent =
         getSitesetting?.emailContent || "This is your Mail Verification OTP";
       const copyright =
@@ -291,7 +253,7 @@ class login_register {
       const logo = getSitesetting?.logo || Config.Cloudinary_logo;
       const emailSubject = getSitesetting?.emailSubject || "Email Verification";
       const logoPosition = getSitesetting?.logoPosition || 'center';
-      const lastLine = getSitesetting?.lastLine || "";
+      const userName = name || "User";
 
       const OTP = Math.floor(100000 + Math.random() * 900000);
 
@@ -310,15 +272,16 @@ class login_register {
 
       const datas = fs.readFileSync(emailOTP, "utf8");
       let bodyData = datas.toString();
+      const formattedEmailContent = emailContent.replace(/\n/g, "<br/>");
 
       const placeholders = {
         "{{validOTP}}": OTP,
-        "{{EmailContent}}": emailContent,
+        "{{EmailContent}}": formattedEmailContent,
         "{{ExpTime}}": resendOTPExpireTimeInMinutes,
         "{{compName}}": copyright,
         "{{compImage}}": logo,
         "{{logoPosition}}": logoPosition,
-        "{{lastLine}}": lastLine
+        "{{userName}}": userName,
       };
       bodyData = bodyData.replace(
         /{{validOTP}}/g,
@@ -342,8 +305,8 @@ class login_register {
         placeholders["{{logoPosition}}"]
       );
       bodyData = bodyData.replace(
-        /{{lastLine}}/g,
-        placeholders["{{lastLine}}"]
+        /{{userName}}/g,
+        placeholders["{{userName}}"]
       );
 
       const subject = emailSubject;
@@ -359,116 +322,6 @@ class login_register {
       res.status(500).send({ status: false, message: "Internal Server Error" });
     }
   };
-
-  // Login
-  // user_Login = async (req, res) => {
-  //   try {
-
-  //     const user = await userModule
-  //       .findOne({ email: req.body.email })
-  //       .hint({ _id: 1 });
-  //     // console.log("user>>>", user);
-
-  //     if (user) {
-  //       const findKYCUser = await kycUserData.findOne({ user_id: user._id });
-  //       let userDbPassword = user.password;
-  //       var bytes = CryptoJS.AES.decrypt(userDbPassword, Config.userEncrypt);
-  //       var originalText = bytes.toString(CryptoJS.enc.Utf8);
-  //       if (originalText !== req.body.password) {
-  //         return res.send({
-  //           status: false,
-  //           message: "You have entered incorrect password.",
-  //         });
-  //       } else if (user.account_status == "De-Active") {
-  //         return res.send({
-  //           status: false,
-  //           message: "Your Account has been Deactivated",
-  //         });
-  //       } else if (user.account_status == "Deleted") {
-  //         return res.send({
-  //           status: false,
-  //           message: "Your Account has been Deleted",
-  //         });
-  //       } else if (findKYCUser?.sdk_verification.reviewRejectType == "FINAL") {
-  //         return res.send({
-  //           status: false,
-  //           message: "Your Account has been Blocked",
-  //         });
-  //       } else {
-  //         const existingSession = activeSession.get(req.body.email);
-  //         // console.log(existingSession,"existingsession>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>")
-  //         if (existingSession && existingSession.email == req.body.email) {
-  //           // console.log(`Logging out previous user: ${existingSession.email}`);
-
-  //           await userModule.findOneAndUpdate(
-  //             { email: existingSession.email },
-  //             {
-  //               $set: { user_auth: "" },
-  //             }
-  //           );
-  //           let socket = socketHelper.GetSocket();
-
-  //           const socketId = userSocketMap.get(req.body.email);
-  //           // console.log(socketId,"socketId>>>>>>>>>>>>>>>>")
-  //           if (socketId) {
-  //             socket.to(socketId).emit("forceLogout", {
-  //               reason: "You have been logged out due to a new login.",
-  //             });
-  //             // console.log(`Sent forceLogout to ${req.body.email}`);
-  //           }
-  //           activeSession.delete(req.body.email);
-  //         }
-
-  //         const token = jwt.sign({ id: user._id }, Config.JWT_USER_SECRET, {
-  //           expiresIn: "12h",
-  //         });
-  //         if (token) {
-  //           await userModule.findOneAndUpdate(
-  //             { email: req.body.email },
-  //             {
-  //               $set: {
-  //                 user_auth: token,
-  //               },
-  //             }
-  //           );
-  //           activeSession.set(req.body.email, {
-  //             email: req.body.email,
-  //             token: token,
-  //           });
-  //           let encryptedResponse;
-  //           if (user.TFAEnableKey !== "" || user.TFAStatus == false) {
-  //             encryptedResponse = encryptData({
-  //               status: true,
-  //               message: "Please continue to 2FA verification",
-  //               token,
-  //               userData: user,
-  //             });
-  //           } else {
-  //             encryptedResponse = encryptData({
-  //               status: true,
-  //               message: "Login Successfully!",
-  //               token,
-  //               userData: user,
-  //             });
-  //           }
-  //           // console.log("encryptedResponse", encryptedResponse);
-
-  //           return res.send({ encryptedData: encryptedResponse });
-  //         } else {
-  //           res.send({ status: false, message: "Login Failed!" });
-  //         }
-  //       }
-  //     } else {
-  //       return res.send({
-  //         status: false,
-  //         message: " This email is not registered with us.",
-  //       });
-  //     }
-  //   } catch (error) {
-  //     console.log("error", error);
-  //     res.status(500).send({ status: false, message: "Please Signup First.." });
-  //   }
-  // };
 
   user_Login = async (req, res) => {
     try {
@@ -586,11 +439,9 @@ class login_register {
   bussiness_form = async (req, res) => {
     const id = res.locals.user_id;
     const datas = req.body;
-    // console.log('datas----', datas);
     try {
       const existingBusinessUser = await bussinessUser.findOne({ user_id: id });
       const files = req.files;
-      // console.log('files', files)
       const BussinessForm = datas
         ? {
           ...datas,
@@ -663,7 +514,6 @@ class login_register {
           },
         ],
       };
-      // console.log('formData--', formData);
       // Create
       if (!existingBusinessUser) {
         const createFormData = new bussinessUser(formData);
@@ -691,7 +541,6 @@ class login_register {
   // Mobile OTP
 
   phone_otp = async (req, res) => {
-    // console.log(req.body, "-----------")
 
     const { phone, countryCode, country } = req.body;
     try {
@@ -833,28 +682,18 @@ class login_register {
     const id = res.locals.user_id;
     const { verifyToken, verifyOtp, signType } = req.body;
 
-    // console.log("verifyOtp--", verifyOtp);
-
     try {
       if (!verifyOtp) {
         return res.send({ status: false, message: "Enter Your SMS OTP!" });
       }
 
       const verifyMail = jwt.verify(verifyToken, Config.MAIL_CONFIRM_SECRET);
-      // console.log("verifyMail.smsOtp--typeof",typeof verifyMail.smsOtp,"verifyOtp--typeof",typeof verifyOtp);
-
-      // console.log("verifyMail.smsOtp--",verifyMail.smsOtp,"verifyOtp--",verifyOtp);
 
       if (verifyMail.smsOtp == verifyOtp) {
-        // console.log("Otp Matched");
 
         const user = await kycUserData.findOne({ user_id: id });
-        // console.log("user--", user);
-
         let updateObj = {};
-
         if (user?.phone_number?.length > 0) {
-          // console.log("Update index 0 if already exists");
 
           // Update index 0 if already exists
           updateObj = {
@@ -866,7 +705,6 @@ class login_register {
             },
           };
         } else {
-          // console.log("Insert fresh phone number entry");
 
           // Insert fresh phone number entry
           updateObj = {
@@ -918,7 +756,6 @@ class login_register {
 
   verifySignUp_Phone_otp = async (req, res) => {
     const { verifyToken, verifyOTP, Email, Phone } = req.body;
-    console.log({ verifyToken, verifyOTP, Email, Phone });
 
     try {
 
@@ -927,21 +764,14 @@ class login_register {
       }
 
       const verifyMail = jwt.verify(verifyToken, Config.MAIL_CONFIRM_SECRET);
-      // console.log("verifyMail.smsOtp--typeof",typeof verifyMail.smsOtp,"verifyOtp--typeof",typeof verifyOtp);
-
-      // console.log("verifyMail.smsOtp--",verifyMail.smsOtp,"verifyOtp--",verifyOtp);
 
       if (verifyMail.smsOtp == verifyOTP) {
-        // console.log("Otp Matched");
         const phoneNumber = Phone[0].number;
 
         const user = await SignUpVerifyPhone.findOne({ user_email: Email, "phone_number.0.number": phoneNumber });
-        console.log("user--", user);
-
         let updateObj = {};
 
         if (user?.phone_number?.length > 0) {
-          // console.log("Update index 0 if already exists");
 
           // Update index 0 if already exists
           updateObj = {
@@ -954,7 +784,6 @@ class login_register {
             },
           };
         } else {
-          // console.log("Insert fresh phone number entry");
 
           // Insert fresh phone number entry
           updateObj = {
@@ -1006,55 +835,9 @@ class login_register {
     }
   };
 
-  // verifyPhone_otp = async (req, res) => {
-  //     const id = res.locals.user_id
-  //     const { verifyToken, verifyOtp } = req.body;
-  //     // console.log('verifyToken', verifyToken)
-
-  //     try {
-  //         if (!verifyOtp) {
-  //             return res.send({ status: false, message: "Enter Your SMS OTP!" })
-  //         }
-  //         const verifyMail = jwt.verify(verifyToken, Config.MAIL_CONFIRM_SECRET)
-  //         // console.log(verifyMail, "verifyMail");
-
-  //         if (verifyMail.smsOtp == verifyOtp) {
-  //             const updateOTP = await kycUserData.findOneAndUpdate(
-  //                 { user_id: id },
-  //                 {
-  //                     $set: {
-  //                         "phone_number.0.country": verifyMail.country,
-  //                         "phone_number.0.country_code": verifyMail.countryCode,
-  //                         "phone_number.0.number": verifyMail.phone,
-  //                         "phone_number.0.phoneNo_verify": true
-  //                     }
-  //                 },
-  //                 { new: true }
-  //             );
-  //             if (updateOTP) {
-  //                 return res.send({ status: true, message: 'OTP Verified successfully' });
-  //             }
-
-  //         } else {
-  //             return res.send({ status: false, message: 'Incorrect SMS OTP!' });
-  //         }
-  //     } catch (err) {
-  //         // console.log("err---", err);
-  //         if (err.name === 'TokenExpiredError') {
-  //             const decodedToken = jwt.decode(verifyToken);
-  //             if (decodedToken.smsOtp == verifyOtp) {
-  //                 return res.send({ status: false, message: "This OTP has expired" });
-  //             } else {
-  //                 return res.send({ status: false, message: "Invalid SMS OTP!" });
-  //             }
-  //         }
-  //         return res.send({ status: false, message: "Invalid OTP" });
-  //     }
-  // };
 
   // KYC_Verification
   kyc_form = async (req, res) => {
-    console.log('kycData--111>>--', req.body)
 
     const id = res.locals.user_id;
     const kycData = req.body;
@@ -1074,32 +857,6 @@ class login_register {
         user_email: userDetail.email,
         ...kycData,
       };
-      // const individual = {
-      //   ...existingIndividual?.individuals,
-      //   dob: kycData?.birth_information?.[0]?.birthday,
-      //   citizenship: kycData?.KYC_document?.[0]?.citizenship
-      // }
-      // console.log(individual)
-      // const formData = {
-      //   user_id: id,
-      //   user_email: userDetail.email,
-      //   individuals: individual
-      // };
-
-      // const updateFormData = {
-      //   individuals: individual
-      // };
-
-      // if (!existingIndividual) {
-      //   const individualform = new userIndiviuals(formData);
-      //   await individualform.save();
-      // } else {
-      //   const updateIndividual = await userIndiviuals.findOneAndUpdate(
-      //     { user_id: id },
-      //     { $set: updateFormData },
-      //     { new: true }
-      //   );
-      // }
 
       if (!existingKyc) {
         const kycCreateform = new kycUserData(kycFormData);
@@ -1141,22 +898,17 @@ class login_register {
       const userDetail = await userModule.findById({ _id: id });
 
       const existingKyc = await kycUserData.findOne({ user_id: id });
-      // console.log("existingKyc", existingKyc);
-
       const findEmailKyc = await SignUpVerifyPhone.findOne({ user_email: userDetail.email });
-
       const kycFormData = {
         user_id: id,
         user_email: userDetail.email,
         phone_number: findEmailKyc?.phone_number || [],
         ...kycData,
       };
-      // console.log("kycFormData", kycFormData);
 
       if (!existingKyc) {
         const kycCreateform = new kycUserData(kycFormData);
         const kycDatacreate = await kycCreateform.save();
-        // console.log("kycDataCreate", kycDatacreate);
 
         return res.send({
           status: true,
@@ -1178,12 +930,6 @@ class login_register {
           { $set: updateFields },
           { new: true }
         );
-        // const updateKycData = await kycUserData.findOneAndUpdate(
-        //   { user_id: id },
-        //   { $set: kycData },
-        //   { new: true }
-        // );
-        // console.log("updateKycData", updateKycData);
 
         return res.send({
           status: true,
@@ -1238,7 +984,6 @@ class login_register {
   resetpass = async (req, res) => {
     try {
       const { token } = req.body;
-      // console.log('token', token)
       if (!token) {
         return res.send({ status: false, message: "Token is required" });
       }
@@ -1253,7 +998,6 @@ class login_register {
       }
       const verify = jwt.verify(token, Config.MAIL_CONFIRM_SECRET);
       const userId = verify.id;
-      // console.log('userId', userId);
 
       const password = CryptoJS.AES.encrypt(
         req.body.password,
@@ -1276,34 +1020,6 @@ class login_register {
       }
     }
   };
-
-  // resetpass = async (req, res) => {
-  //     try {
-  //       const { token } = req.body;
-
-  //       // This will throw an error if expired
-  //       const verify = jwt.verify(token, Config.MAIL_CONFIRM_SECRET);
-
-  //       const userId = verify.id;
-  //       const password = CryptoJS.AES.encrypt(req.body.password, Config.userEncrypt).toString();
-
-  //       await userModule.findByIdAndUpdate(
-  //         { _id: userId },
-  //         { $set: { password: password } }
-  //       );
-
-  //       res.send({ status: true, message: "Password Updated Successfully.." });
-
-  //     } catch (error) {
-  //       if (error.name === 'TokenExpiredError') {
-  //         res.send({ status: false, message: "Reset link has expired. Please request a new one." });
-  //       } else if (error.name === 'JsonWebTokenError') {
-  //         res.send({ status: false, message: "Invalid reset link." });
-  //       } else {
-  //         res.json({ status: false, message: "Something went wrong." });
-  //       }
-  //     }
-  //   };
 
   // Register Form
 
@@ -1422,179 +1138,6 @@ class login_register {
     }
   };
 
-  // user_register_form = async (req, res) => {
-  //   const id = res.locals.user_id;
-  //   const datas = req.body;
-  //   let Images = null;
-
-  //   if (req.files?.stampimage && req.files.stampimage.length > 0) {
-  //     Images = req.files.stampimage[0].path;
-  //   } else if (req.files?.signature && req.files.signature.length > 0) {
-  //     Images = req.files.signature[0].path;
-  //   }
-  //   // console.log("Images", Images);
-  //   // console.log("datas", datas);
-
-  //   try {
-  //     const userDetail = await userModule.findById({ _id: id });
-
-  //     const existingIndivUser = await userIndiviuals.findOne({ user_id: id });
-
-  //     const legalEntity = datas.legal_Entity
-  //       ? {
-  //         ...datas.legal_Entity,
-  //         stampimage: Images || null,
-  //       }
-  //       : null;
-  //     // console.log(legalEntity, "legalEntity");
-
-  //     let individualsData = {};
-  //     let uboData = {};
-  //     if (datas.type == "individuals") {
-  //       individualsData = {
-  //         surname: datas.surname,
-  //         dob: datas.dob,
-  //         birth_place: datas.birth_place,
-  //         citizenship: datas.citizenship,
-  //         actual_address: datas.actual_address,
-  //         domicile: datas.domicile,
-  //         passport_information: {
-  //           document_name: datas.document_name,
-  //           number: datas.number,
-  //           issuing_body: datas.issuing_body,
-  //           expiry_date: datas.expiry_date,
-  //           work_place: datas.work_place,
-  //           share_capital: datas.share_capital,
-  //           tax_residency: datas.tax_residency,
-  //           tax_number: datas.tax_number,
-  //           source_wealth: datas.source_wealth,
-  //           public_officials_1: {
-  //             officials_1: datas.officials_1,
-  //             specify_official_1: datas.specify_official_1,
-  //           },
-  //           public_officials_2: {
-  //             officials_2: datas.officials_2,
-  //             specify_official_2: datas.specify_official_2,
-  //             position_held: datas.position_held,
-  //             period: datas.period,
-  //             relationship: datas.relationship,
-  //           },
-  //           shareHolder_nominee: datas.shareHolder_nominee,
-  //           phone_number: datas.phone_number,
-  //           email: datas.email,
-  //           date: datas.date,
-  //           signature: Images ? Images : datas.signature,
-  //         },
-  //       };
-  //     } else if (datas.type == "ubo") {
-  //       uboData = {
-  //         first_name: datas.first_name,
-  //         last_name: datas.last_name,
-  //         patronymic: datas.patronymic,
-  //         dob: datas.dob,
-  //         birth_place: datas.birth_place,
-  //         citizenship: datas.citizenship,
-  //         company_shareCapital: datas.company_shareCapital,
-  //         domicile: datas.domicile,
-  //         actual_address: datas.actual_address,
-  //         source_wealth: datas.source_wealth,
-  //         tax_residency: datas.tax_residency,
-  //         tax_number: datas.tax_number,
-  //         public_officials_1: {
-  //           officials_1: datas.officials_1,
-  //           specify_official_1: datas.specify_official_1,
-  //         },
-  //         public_officials_2: {
-  //           officials_2: datas.officials_2,
-  //           specify_official_2: datas.specify_official_2,
-  //           position_held: datas.position_held,
-  //           period: datas.period,
-  //           relationship: datas.relationship,
-  //         },
-  //         phone_number: datas.phone_number,
-  //         passport_information: {
-  //           document_name: datas.document_name,
-  //           number: datas.number,
-  //           issuing_body: datas.issuing_body,
-  //           expiry_date: datas.expiry_date,
-  //           business_activity: datas.business_activity,
-  //           signature: Images ? Images : datas.signature,
-  //         },
-  //       };
-  //     }
-
-  //     const formData = {
-  //       user_id: id,
-  //       user_email: userDetail.email,
-  //       individualStatus: datas.legal_Entity
-  //         ? 1
-  //         : datas.type === "individuals"
-  //           ? 0
-  //           : datas.type === "ubo"
-  //             ? 2
-  //             : 0,
-  //       ...(datas.type === undefined &&
-  //         legalEntity && { legal_Entity: legalEntity }),
-  //       ...(datas.type === "individuals" &&
-  //         individualsData && { individuals: individualsData }),
-  //       ...(datas.type === "ubo" && uboData && { ubo: uboData }),
-  //     };
-
-  //     const updateFormData = {
-  //       individualStatus: datas.legal_Entity
-  //         ? 1
-  //         : datas.type === "individuals"
-  //           ? 0
-  //           : datas.type === "ubo"
-  //             ? 2
-  //             : 0,
-  //       ...(datas.type === undefined &&
-  //         legalEntity && { legal_Entity: legalEntity }),
-  //       ...(datas.type === "individuals" &&
-  //         individualsData && { individuals: individualsData }),
-  //       ...(datas.type === "ubo" && uboData && { ubo: uboData }),
-  //     };
-
-  //     if (!existingIndivUser) {
-  //       // Create
-  //       const createFormData = new userIndiviuals(formData);
-  //       const createIndividual = await createFormData.save();
-  //       if (createIndividual) {
-  //         res.send({
-  //           status: true,
-  //           message: "User Data Created Successfully...",
-  //         });
-  //       } else {
-  //         res.send({ status: false, message: "User Data Failed to Create..." });
-  //       }
-  //     } else {
-  //       // Update
-  //       const updateIndividual = await userIndiviuals.findOneAndUpdate(
-  //         { user_id: id },
-  //         { $set: updateFormData },
-  //         { new: true }
-  //       );
-  //       if (updateIndividual) {
-  //         res.send({
-  //           status: true,
-  //           message: "User Data Updated Successfully...",
-  //           data: updateIndividual.individualStatus,
-  //         });
-  //       } else {
-  //         res.send({ status: false, message: "User Data Failed to Update..." });
-  //       }
-  //     }
-  //   } catch (error) {
-  //     // console.log(error, "error======");
-
-  //     if (error instanceof multer.MulterError) {
-  //       return res.status(500).json({ error: error.message });
-  //     }
-  //     console.error("Error updating/creating user data:", error);
-  //     res.status(500).send({ status: false, message: "Internal Error..." });
-  //   }
-  // };
-
   UserDeactive = async (req, res) => {
     const id = res.locals.user_id;
     const password = req.body.password;
@@ -1677,7 +1220,7 @@ class login_register {
   changepassword = async (req, res) => {
     const id = res.locals.user_id;
     const { oldpassword, newPassWord, confirmPassWord } = req.body;
-    try { 
+    try {
       const users = await userModule.findOne({ _id: id });
       const userPass = users.password;
       const bytes = CryptoJS.AES.decrypt(userPass, Config.userEncrypt);
@@ -1754,7 +1297,6 @@ class login_register {
       zip_code
     } = req.body;
     const image = req.file ? req.file.path : null;
-    // console.log(image, "image");
 
     if (phone) {
       function stripCountryCode(phone, country_Code) {
@@ -1844,7 +1386,6 @@ class login_register {
   getUserCopyRightsData = async (req, res) => {
     try {
       const UserCopyRightsData = await SiteSetting.find({});
-      //   console.log("CopyRightsData", UserCopyRightsData);
       if (UserCopyRightsData) {
         return res.send({
           status: true,
@@ -1862,6 +1403,168 @@ class login_register {
       return res.status(500).json({ error: "Internal server error." });
     }
   };
+
+    sendEmailOTP = async (req, res) => {
+
+    const decData = req.body.data;
+    const Email = await decryptData(decData);
+
+    try {
+      const getSitesetting = await SiteSetting.findOne({});
+      const name = Email.email.split("@")[0];
+      const expireTimeInMinutes = getSitesetting?.expireTime || 5;
+      const emailContent = "We received a request to withdraw funds from your account. To proceed with this transaction, please use the One-Time Password (OTP) below:";
+      const copyright =
+        getSitesetting?.copyright || "© 2025 Rempic. All rights reserved.";
+      const logo = getSitesetting?.logo || Config.Cloudinary_logo;
+      const emailSubject = "Withdrawal OTP Verification Code";
+      const logoPosition = getSitesetting?.logoPosition || 'center';
+      const userName = name || "User";
+
+      const OTP = Math.floor(100000 + Math.random() * 900000);
+      const token = jwt.sign(
+        { verifyOTP: OTP, email: Email.email },
+        Config.MAIL_CONFIRM_SECRET,
+        { expiresIn: `${expireTimeInMinutes}m` }
+      );
+
+      const Token = jwt.verify(token, Config.MAIL_CONFIRM_SECRET);
+      const data = fs.readFileSync(withdrawOTP, "utf8");
+      let bodyData = data.toString();
+      const formattedEmailContent = emailContent.replace(/\n/g, "<br/>");
+
+
+      const placeholders = {
+        "{{validOTP}}": OTP,
+        "{{EmailContent}}": formattedEmailContent,
+        "{{ExpTime}}": expireTimeInMinutes,
+        "{{compName}}": copyright,
+        "{{compImage}}": logo,
+        "{{logoPosition}}": logoPosition,
+        "{{userName}}": userName,
+      };
+      bodyData = bodyData.replace(
+        /{{validOTP}}/g,
+        placeholders["{{validOTP}}"]
+      );
+      bodyData = bodyData.replace(
+        /{{EmailContent}}/g,
+        placeholders["{{EmailContent}}"]
+      );
+      bodyData = bodyData.replace(/{{ExpTime}}/g, placeholders["{{ExpTime}}"]);
+      bodyData = bodyData.replace(
+        /{{compName}}/g,
+        placeholders["{{compName}}"]
+      );
+      bodyData = bodyData.replace(
+        /{{compImage}}/g,
+        placeholders["{{compImage}}"]
+      );
+      bodyData = bodyData.replace(
+        /{{logoPosition}}/g,
+        placeholders["{{logoPosition}}"]
+      );
+      bodyData = bodyData.replace(
+        /{{userName}}/g,
+        placeholders["{{userName}}"]
+      );
+
+      const subject = emailSubject;
+      forgetPassMailSend(Email.email, subject, bodyData);
+
+      const encryptedResponse = encryptData({
+        status: true,
+        message: "OTP sent to your email for verification!",
+        token,
+      });
+      return res.send({ encryptedData: encryptedResponse });
+    }
+    catch (error) {
+      console.error("Error sending email OTP:", error);
+      return res.send({ status: false, message: "Failed to send OTP" });
+    }
+  };
+
+  verifyEmailOTP = async (req, res) => {
+    try {
+      const decData = req.body.data;
+      const data = await decryptData(decData);
+      const token = data.token;
+      const verifyToken = jwt.verify(token, Config.MAIL_CONFIRM_SECRET);
+      
+      const currentTimestamp = Math.floor(Date.now() / 1000);
+
+      if (currentTimestamp > verifyToken.exp) {
+        return res.send({
+          status: false,
+          message: "OTP has expired. Please request a new one.",
+        });
+      }
+
+      if (verifyToken.verifyOTP === Number(data.otp)) {
+        const encryptedResponse = encryptData({
+          status: true,
+          message: "Email verified successfully!",
+        });
+
+        return res.send({ encryptedData: encryptedResponse });
+      } else {
+        return res.send({ status: false, message: "Invalid OTP" });
+      }
+    } catch (error) {
+      if (error.name === "TokenExpiredError") {
+        res.send({ status: false, message: "OTP Expired " });
+      } else {
+        console.log(error.message, "error");
+        res.send({ message: "Something went to be wrong" });
+      }
+    }
+
+  };
+
+  TfaCodeVerify = async (req, res) => {
+    try {
+      const decData = req.body.data;
+      const data = await decryptData(decData);
+
+      const userData = await userModule.findOne({ email: data.email });
+
+      if (!data.otp) {
+        const encryptedResponse = encryptData({
+          status: false,
+          message: "Please enter 2FA Code to Verify",
+        });
+        return res.send({ encryptedData: encryptedResponse });
+      }
+
+      // Verify OTP
+      const verified = speakeasy.totp.verify({
+        secret: userData.TFAEnableKey,
+        encoding: "base32",
+        token: data.otp,
+        window: 0,
+      });
+
+      if (!verified) {
+        const encryptedResponse = encryptData({
+          status: false,
+          message: "Invalid 2FA Code",
+        });
+        return res.send({ encryptedData: encryptedResponse });
+      }
+
+      const encryptedResponse = encryptData({
+        status: true,
+        verified: true,
+        message: "2FA verification completed.",
+      });
+
+      return res.send({ encryptedData: encryptedResponse });
+
+    } catch (error) {
+      console.error("Error verifying 2FA OTP:", error);
+    }
+  }
 }
 
 module.exports = new login_register();

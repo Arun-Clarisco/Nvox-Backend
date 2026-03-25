@@ -212,7 +212,7 @@ const supportTicketAdminController = {
             return res.send({ encryptedData: encryptedResponse });
           }
         } else {
-          console.log("hi");
+          res.send({ status: false, message: "Something went wrong!" });
         }
       }
     } catch (err) {

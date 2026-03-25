@@ -8,7 +8,7 @@ const SiteSettingSchema = new mongoose.Schema({
     copyright: { type: String, default: "" },
     logo: { type: String, default: "" },
     logoPosition: { type: String, default: '' },
-    lastLine: { type: String, default: "" },
+    // lastLine: { type: String, default: "" },
 },{ timestamps: true });
 
 module.exports = mongoose.model("sitesetting", SiteSettingSchema)

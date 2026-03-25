@@ -57,7 +57,7 @@ class mobileRoute {
         const { email } = req.body
         try {
             const userEmail = await userModule.findOne({ email: email });
-            // console.log('userEmail----', userEmail)
+            const name = email.split("@")[0];
             if (!userEmail) {
                 return res.send({ status: false, message: "Invalid Email.." })
             }
@@ -68,19 +68,20 @@ class mobileRoute {
             const copyright = getSitesetting?.copyright || "© 2025 Rempic. All rights reserved.";
             const token = jwt.sign({ verifyOTP: OTP, userEmail }, Config.MAIL_CONFIRM_SECRET, { expiresIn: `${expireTimeInMinutes}m` });
             const logoPosition = getSitesetting?.logoPosition || 'center';
-            const lastLine = getSitesetting?.lastLine || "";
+            const userName = name || "User";
 
             const data = fs.readFileSync(emailOTP, 'utf8');
             let bodyData = data.toString();
+            const formattedEmailContent = emailContent.replace(/\n/g, "<br/>");
 
             const placeholders = {
                 "{{validOTP}}": OTP,
                 "{{ExpTime}}": expireTimeInMinutes,
                 "{{compName}}": copyright,
                 "{{compImage}}": `${Config.Cloudinary_logo}`,
-                "{{EmailContent}}": emailContent,
+                "{{EmailContent}}": formattedEmailContent,
                 "{{logoPosition}}": logoPosition,
-                "{{lastLine}}": lastLine
+                "{{userName}}": userName
             };
             bodyData = bodyData.replace(/{{validOTP}}/g, placeholders["{{validOTP}}"]);
             bodyData = bodyData.replace(/{{ExpTime}}/g, placeholders["{{ExpTime}}"]);
@@ -88,7 +89,7 @@ class mobileRoute {
             bodyData = bodyData.replace(/{{compImage}}/g, placeholders["{{compImage}}"]);
             bodyData = bodyData.replace(/{{EmailContent}}/g, placeholders["{{EmailContent}}"]);
             bodyData = bodyData.replace(/{{logoPosition}}/g, placeholders["{{logoPosition}}"]);
-            bodyData = bodyData.replace(/{{lastLine}}/g, placeholders["{{lastLine}}"]);
+            bodyData = bodyData.replace(/{{userName}}/g, placeholders["{{userName}}"]);
 
             const subject = "Forgot Password";
             forgetPassMailSend(email, subject, bodyData);
@@ -103,13 +104,15 @@ class mobileRoute {
         const { data } = req.body;
         // console.log(data, req.body)
         try {
+            const userEmail = await userModule.findOne({ email: data.email });
+            const name = data.email.split("@")[0];
             const getSitesetting = await SiteSetting.findOne({});
             const OTP = Math.floor(100000 + Math.random() * 900000);
             const expireTimeInMinutes = getSitesetting?.resendOTPexpireTime || 2;
             const emailContent = 'Use the OTP to complete your verification. Do not share it with anyone.';
             const copyright = getSitesetting?.copyright || "© 2025 Rempic. All rights reserved.";
             const logoPosition = getSitesetting?.logoPosition || 'center';
-            const lastLine = getSitesetting?.lastLine || "";
+            const userName = name || "User";
 
 
             const newToken = jwt.sign({
@@ -119,15 +122,16 @@ class mobileRoute {
 
             const datas = fs.readFileSync(emailOTP, 'utf8');
             let bodyData = datas.toString();
+            const formattedEmailContent = emailContent.replace(/\n/g, "<br/>");
 
             const placeholders = {
                 "{{validOTP}}": OTP,
                 "{{ExpTime}}": expireTimeInMinutes,
                 "{{compName}}": copyright,
                 "{{compImage}}": `${Config.Cloudinary_logo}`,
-                "{{EmailContent}}": emailContent,
+                "{{EmailContent}}": formattedEmailContent,
                 "{{logoPosition}}": logoPosition,
-                "{{lastLine}}": lastLine
+                "{{userName}}": userName,
             };
             bodyData = bodyData.replace(/{{validOTP}}/g, placeholders["{{validOTP}}"]);
             bodyData = bodyData.replace(/{{ExpTime}}/g, placeholders["{{ExpTime}}"]);
@@ -135,7 +139,7 @@ class mobileRoute {
             bodyData = bodyData.replace(/{{compImage}}/g, placeholders["{{compImage}}"]);
             bodyData = bodyData.replace(/{{EmailContent}}/g, placeholders["{{EmailContent}}"]);
             bodyData = bodyData.replace(/{{logoPosition}}/g, placeholders["{{logoPosition}}"]);
-            bodyData = bodyData.replace(/{{lastLine}}/g, placeholders["{{lastLine}}"]);
+            bodyData = bodyData.replace(/{{userName}}/g, placeholders["{{userName}}"]);
 
             const subject = "Resend Forgot Password Mail OTP";
             forgetPassMailSend(data.email, subject, bodyData);

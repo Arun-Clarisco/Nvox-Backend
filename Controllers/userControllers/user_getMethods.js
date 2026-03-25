@@ -27,23 +27,6 @@ const { updateOrderIdHistory } = require("./buy&sell");
 const ObjectId = mongoose.Types.ObjectId;
 
 class getMethods {
-  // userGetData = async (req, res) => {
-  //   const id = res.locals.user_id;
-  //   // console.log("id", id);
-  //   try {
-  //     await userModule
-  //       .findById({ _id: id })
-  //       .then((resp) => {
-  //         // console.log("resp", resp);
-  //         res.send({ status: true, message: "Get the User Data", resp });
-  //       })
-  //       .catch(() => {
-  //         res.send({ status: false, message: "Cannot Get the User Data" });
-  //       });
-  //   } catch (error) {
-  //     res.send({ status: false, message: "Something Went Wrong.." });
-  //   }
-  // };
 
   userGetData = async (req, res) => {
     const id = res.locals.user_id;
@@ -69,25 +52,7 @@ class getMethods {
       });
     }
   };
-  // kyc data
-  // kycGetData = async (req, res) => {
-  //   const id = res.locals.user_id;
-
-  //   try {
-  //     await kycUserData
-  //       .findOne({ user_id: id })
-  //       .then((resp) => {
-  //         // console.log('resp', resp)
-  //         res.send({ status: true, message: "Get the KYC Data", resp });
-  //       })
-  //       .catch(() => {
-  //         res.send({ status: false, message: "Cannot Get the KYC Data" });
-  //       });
-  //   } catch (error) {
-  //     res.send({ status: false, message: "Something Went Wrong.." });
-  //   }
-  // };
-
+  
   kycGetData = async (req, res) => {
     const id = res.locals.user_id;
 
@@ -126,28 +91,6 @@ class getMethods {
       res.send({ status: false, message: "Something went wrong" });
     }
   };
-
-  // getPhoneData = async (req, res) => {
-  //   const email = req.query.email;
-
-  //   try {
-  //     if (email && email !== "" && email !== "null" && email !== "undefined") {
-  //       await SignUpVerifyPhone
-  //         .findOne({ user_email: email })
-  //         .then((resp) => {
-  //           res.send({ status: true, message: "Get the KYC Data", resp });
-  //         })
-  //         .catch(() => {
-  //           res.send({ status: false, message: "Cannot Get the KYC Data" });
-  //         });
-  //     } else {
-  //       res.send({ status: false, message: "Get the KYC Data", resp: [] });
-  //     }
-
-  //   } catch (error) {
-  //     res.send({ status: false, message: "Something Went Wrong.." });
-  //   }
-  // };
 
   // individual data
   IndivGetData = async (req, res) => {
@@ -283,7 +226,6 @@ class getMethods {
 
   userDepositHistory = async (req, res) => {
     const id = res.locals.user_id;
-    // console.log("id", id);
 
     const { page = 1, limit = 10, search = "", symbol } = req.query;
     try {
@@ -307,8 +249,6 @@ class getMethods {
       };
 
       const totalRecords = await DepositData.countDocuments(searchFilter);
-      // console.log("totalRecords", totalRecords);
-
       const depositData = await DepositData.find(searchFilter)
         .sort({ _id: -1 })
         .skip(skip)
@@ -387,7 +327,6 @@ class getMethods {
 
   getUserProfile = async (req, res) => {
     const id = res.locals.user_id;
-    // console.log("iddvfdv---", id);
 
     try {
       const userProfile = await userModule.aggregate([
@@ -441,7 +380,6 @@ class getMethods {
           },
         },
       ]);
-      // console.log("userProfile", userProfile);
 
       if (userProfile) {
         res.send({ status: true, userProfile });
@@ -554,8 +492,6 @@ class getMethods {
         })
         .filter(Boolean);
 
-      // console.log("enriched---",enriched);
-
       socket.emit("recentOrderList", {
         status: true,
         message: "Recent taker trades retrieved",
@@ -573,9 +509,7 @@ class getMethods {
 
   userGetBalance = async (data, socket) => {
     try {
-      // console.log({ data })
       const token = data?.token;
-      // console.log("token", token, "typeof token ", typeof token);
       if (!token) {
         return socket.emit("getBalance", {
           status: false,
@@ -624,7 +558,6 @@ class getMethods {
 
   getUserTransactionData = async (req, res) => {
     const id = res.locals.user_id;
-    // console.log('id', id)
 
     try {
       if (!id) {
@@ -651,8 +584,6 @@ class getMethods {
       ]);
 
       const totalSum = result.length > 0 ? result[0].totalSum : 0;
-      // console.log("Totalwithdraw Sum of USD Price in 30 days:", totalSum);
-
       const depositResult = await DepositData.aggregate([
         {
           $match: {
@@ -667,13 +598,9 @@ class getMethods {
           },
         },
       ]);
-      // console.log('depositResult', depositResult)
 
       const depositTotalSum =
         depositResult.length > 0 ? depositResult[0].totalDeposit : 0;
-
-      // console.log("Total Deposit Sum:", depositTotalSum);
-
       const WithdrawDatatest = await WithdrawData.find({ userId: id })
         .sort({ _id: -1 })
         .limit(2);
@@ -697,10 +624,7 @@ class getMethods {
         (a, b) => new Date(b.createdDate) - new Date(a.createdDate)
       );
 
-      // Get the last 4 entries
       const latest4 = combined.slice(0, 4);
-      // console.log('latest4', latest4);
-
       const mergedData = depositDatatest.concat(WithdrawDatatest);
 
       if (!mergedData) {
@@ -731,7 +655,6 @@ class getMethods {
       search = "",
       transactionHash,
     } = req.query;
-    // console.log("id", req.query);
 
     try {
       if (!id) {
@@ -747,10 +670,7 @@ class getMethods {
       const matchQuery = {
         userId: id,
       };
-      // console.log("matchQuery", matchQuery);
 
-      // if (fiatCurrency) matchQuery.fiatCurrency = fiatCurrency;
-      // if (cryptoCurrency) matchQuery.cryptoCurrency = cryptoCurrency;
       if (type) matchQuery.isBuyOrSell = type;
       if (status) matchQuery.status = status;
 
@@ -781,7 +701,6 @@ class getMethods {
       const History = await FiatOrderData.find({ userId: id })
         .sort({ _id: -1 })
         .limit(5);
-      // console.log(History, "History");
 
       res.json({
         status: true,
@@ -833,7 +752,6 @@ class getMethods {
       search = "",
       monthFilter = "allMonths",
     } = req.query;
-    // console.log("req", req.query);
 
     try {
       if (!id) {
@@ -848,10 +766,7 @@ class getMethods {
 
       let dateFilter = {};
       const today = new Date();
-      // console.log("today", today);
-
       const monthget = today.getMonth();
-      // console.log("monthget", monthget);
 
       if (monthFilter === "lastMonth") {
         const startOfLastMonth = new Date(
@@ -881,7 +796,6 @@ class getMethods {
           today.getMonth() - 2,
           1
         );
-        // console.log("startOfLastMonth", startOfTwoMonthsAgo)
 
         const endOfTwoMonthsAgo = new Date(
           today.getFullYear(),
@@ -892,7 +806,6 @@ class getMethods {
           59,
           999
         );
-        // console.log("endOfLastMonth", endOfTwoMonthsAgo)
 
         dateFilter = {
           createdAt: {
@@ -941,7 +854,6 @@ class getMethods {
         _id: -1,
       });
 
-      // console.log("Withdrawhistory", Withdrawhistory);
 
       res.json({
         status: true,
@@ -1024,7 +936,6 @@ class getMethods {
       }
 
       const userChart = await TotalAmountchart.findOne({ userId: id });
-      // console.log("userChart", userChart);
 
       if (userChart == null || !Array.isArray(userChart.currentDayPrice)) {
         for (let i = 0; i < limitOfData; i++) {
@@ -1042,7 +953,6 @@ class getMethods {
       }
 
       const today = new Date();
-      // console.log("today", today);
       const endUTC = new Date(
         Date.UTC(
           today.getUTCFullYear(),
@@ -1104,7 +1014,6 @@ class getMethods {
         }
       }
       finalData = arr.flat(Infinity);
-      // console.log("finalData :>> ", finalData);
       const totalCount = finalData.length;
 
       return res.send({
@@ -1124,18 +1033,14 @@ class getMethods {
   };
 
   individualTradeOderHistory = async (req, res) => {
-    // console.log("work");
 
     try {
       const id = res.locals.user_id;
-      // console.log(id, "id");
       const ID = req.query.id;
-      // console.log(ID, "ID");
       const preresult = await TradeOrderHistory.find({
         userId: id,
         _id: new ObjectId(ID),
       });
-      // console.log(preresult, "preresult");
       const orderidtype =
         preresult[0].type === "buy" ? "buyOrderId" : "sellOrderId";
       const result = await TradeOrderHistory.aggregate([
@@ -1192,7 +1097,6 @@ class getMethods {
         },
       ]);
 
-      // console.log("result", result);
       res.send({ status: true, data: result, message: "Successfully.." });
     } catch (error) {
       res.send({ status: false, message: "Something Went Wrong.." });
@@ -1275,9 +1179,6 @@ class getMethods {
       ) {
         searchFilter.status = Number(statusfilter);
       }
-
-      // console.log("Final Search Filter:",JSON.stringify(searchFilter, null, 2));
-
       const totalRecords = await Model.countDocuments(searchFilter);
       const records = await Model.find(searchFilter)
         .sort({ _id: -1 })
@@ -1303,25 +1204,18 @@ class getMethods {
       const TermsConditionsData = await TermSchema.findOne({
         Note: "TermsConditions",
       });
-      // console.log("TermsConditions", TermsConditionsData);
       const PriceData = await TermSchema.findOne({ Note: "Price" });
-      // console.log("Price", PriceData);
       const PartnerBankData = await TermSchema.findOne({ Note: "PartnerBank" });
-      // console.log("PartnerBank", PartnerBankData);
       const OtherConditionData = await TermSchema.findOne({
         Note: "OtherCondition",
       });
-      // console.log("OtherCondition", OtherConditionData);
       const SpecialConditionData = await TermSchema.findOne({
         Note: "SpecialCondition",
       });
-      // console.log("SpecialCondition", SpecialConditionData);
       const DataPrivacyData = await TermSchema.findOne({ Note: "DataPrivacy" });
-      // console.log("DataPrivacy", DataPrivacyData);
       const DataProtectionData = await TermSchema.findOne({
         Note: "DataProtection",
       });
-      // console.log("DataProtection", DataProtectionData);
       return res.send({
         status: true,
         TermsConditionsData,

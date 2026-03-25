@@ -16,13 +16,17 @@ const fiatcurrencies = async (req, res) => {
       }
     );
 
-    // console.log("Transak API Response:", response.data);
+    const currencies = Array.isArray(response?.data.response) ? response.data.response : [];
+    console.log("currencies==+", currencies.length);
 
-    if (Array.isArray(response.data.response)) {
-      res.json(response.data.response);
-    } else {
-      res.json([]);
-    }
+    res.json(currencies);
+
+
+    // if (Array.isArray(response.data.response)) {
+    //   res.json(response.data.response);
+    // } else {
+    //   res.json([]);
+    // }
   } catch (error) {
     console.error(
       "Error fetching fiat currencies:",
@@ -79,10 +83,8 @@ const getOrder = async (req, res) => {
         },
       }
     );
-    // console.log(tokenResponse,"tokenResponse");
 
     const accessToken = tokenResponse.data.data.accessToken;
-    // console.log("Access token:", accessToken);
 
     // Now use the access token to fetch order details
     const response = await axios.get(
@@ -95,7 +97,6 @@ const getOrder = async (req, res) => {
       }
     );
 
-    // console.log("Order response:", response.data);
     res.json(response.data.response); // Return order details to client
   } catch (error) {
     console.error("Error:", error.response?.data || error.message);
@@ -133,8 +134,6 @@ const handleLatestOrderIdHistory = async (req, res) => {
   try {
     const userId = res.locals.user_id;
     const { orderId } = req.body;
-
-    // console.log(userId,orderId)
 
     const tokenResponse = await axios.post(
       `${config.TransakAPIURL}/partners/api/v2/refresh-token`,

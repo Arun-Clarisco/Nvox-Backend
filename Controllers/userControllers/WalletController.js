@@ -10,9 +10,9 @@ const { userUpdateBalance } = require("./userController");
 const axios = require("axios");
 const config = require("../../Config/config");
 const pairData = require("../../Modules/userModule/pairData");
-const WebSocket = require("ws");
 const adminswapfee = require("../../Modules/adminModule/Adminswapfeehistroy");
 const { encryptData, decryptData } = require("../../Config/Security");
+const Decimal = require("decimal.js");
 
 const createAddress = async (req, res) => {
   try {
@@ -172,33 +172,61 @@ const userWithdrawRequest = async (req, res) => {
       return res.status(500).json({ error: "Failed to fetch live price." });
     }
 
-    // console.log('data----', data)
     const symbol = `${data.Symbol.substring(0, 3)}USDT`;
-    // console.log('symbol----', symbol)
     const getPairData = await pairData.findOne({
       symbol: data.Symbol == "USDT" ? "USDT" : symbol,
     });
 
-    let finalAmount =
-      data.amount - data.amount * (getPairData.withdrawFee / 100);
-    let feesAmount = data.amount * (getPairData.withdrawFee / 100);
+    const amount = new Decimal(data.amount);
+    const feePercent = new Decimal(getPairData.withdrawFee).div(100);
 
-    function fixDecimal(value, decimals = 8) {
-      const multiplier = Math.pow(10, decimals);
-      return (Math.round(value * multiplier) / multiplier).toFixed(decimals);
-    }
+    // Calculate fee
+    const feesAmount = amount.mul(feePercent);
 
-    // console.log('finalAmount', finalAmount)
+    // Calculate final amount
+    const finalAmount = amount.minus(feesAmount);
+
+    // Format properly (example: 8 decimals)
+    const formattedFee = feesAmount.toFixed(8);
+    const formattedFinalAmount = finalAmount.toFixed(8);
+
+    // let finalAmount = Number(data.amount) - Number(data.amount) * (getPairData.withdrawFee / 100);
+    // console.log("finalAmount--", finalAmount, typeof finalAmount);
+
+    // let feesAmount = Number(data.amount) * (getPairData.withdrawFee / 100);
+    // console.log("feesAmount--", feesAmount, typeof feesAmount);
+
+    // function fixDecimal(value, decimals = 8) {
+    //   const multiplier = Math.pow(10, decimals);
+    //   return (Math.round(value * multiplier) / multiplier).toFixed(decimals);
+    // }
+
     const reqData = new withdrawHistory({
       userId: userid,
       toaddress: data.toAddress,
-      amount: finalAmount,
-      fees: feesAmount,
+      amount: formattedFinalAmount,
+      fees: formattedFee,
       liveusdPrice: LiveDataPrice,
-      TotalAmount_in_usdprice: (finalAmount * LiveDataPrice).toFixed(6),
+      TotalAmount_in_usdprice: (formattedFinalAmount * LiveDataPrice).toFixed(6),
       status: 1,
       moveCur: data.Symbol,
     });
+
+    // const precision = 18;
+
+    // const reqData = new withdrawHistory({
+    //   userId: userid,
+    //   toaddress: data.toAddress,
+    //   amount: finalAmount.toFixed(precision).replace(/\.?0+$/, ""),
+    //   fees: feesAmount.toFixed(precision).replace(/\.?0+$/, ""),
+    //   liveusdPrice: LiveDataPrice,
+    //   TotalAmount_in_usdprice: finalAmount
+    //     .mul(LiveDataPrice)
+    //     .toDecimalPlaces(6)
+    //     .toNumber(),
+    //   status: 1,
+    //   moveCur: data.Symbol,
+    // });
 
     const createWithdrawReq = await reqData.save();
     if (createWithdrawReq) {

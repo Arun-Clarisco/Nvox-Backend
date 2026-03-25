@@ -74,26 +74,6 @@ const notificationController = {
         return res.send({ status: false, message: "User ID is required" });
       }
 
-      // const data = await notificationModel.find({
-      //   $or: [
-      //     // Admin notifications
-      //     {
-      //       notificationType: "admin",
-      //       $or: [
-      //         { "userList.usersId": { $ne: userId } },
-      //         { "userList.clearStatus": { $ne: 1 } }
-      //       ]
-      //     },
-      //     // SupportTicket notifications
-      //     {
-      //       notificationType: "supportTicket",
-      //       $or: [
-      //         { "userList.usersId": { $ne: userId } },
-      //         { "userList.clearStatus": { $ne: 1 } }
-      //       ]
-      //     }
-      //   ]
-      // }).sort({ _id: -1 });
 
       const data = await notificationModel.find({
         $or: [
@@ -113,11 +93,6 @@ const notificationController = {
         ]
       }).sort({ _id: -1 });
 
-
-
-      // console.log("data===", data);
-
-
       const count = data.filter(noti => {
         const userEntry = noti.userList.find(u => u.usersId.toString() === userId);
         if (noti.notificationType === "admin") {
@@ -128,9 +103,6 @@ const notificationController = {
         return false;
       }).length;
 
-      // console.log("count00", count);
-
-
       return res.send({ status: true, message: "Notifications fetched", data, count });
     } catch (error) {
       console.error(error);
@@ -138,58 +110,6 @@ const notificationController = {
     }
   },
 
-
-
-  //   async getAllNotification(req, res) {
-  //   try {
-  //     const { userId } = req.body;
-
-  //     if (!userId) {
-  //       return res.send({ status: false, message: "User ID is required" });
-  //     }
-
-  //     // console.log("userId", userId);
-
-  //     const data = await notificationModel.find({
-  //       notificationType: "admin",
-  //       $or: [
-  //         {
-  //           userList: {
-  //             $not: {
-  //               $elemMatch: { usersId: userId }
-  //             }
-  //           }
-  //         },
-  //         {
-  //           userList: {
-  //             $elemMatch: {
-  //               usersId: userId,
-  //               clearStatus: { $ne: 1 }
-  //             }
-  //           }
-  //         }
-  //       ]
-  //     }).sort({ _id: -1 });
-
-  //     const count = await notificationModel.countDocuments({
-  //         notificationType: "admin",
-  //         $or: [
-  //           { "userList.usersId": { $ne: userId } },
-  //           { "userList.readStatus": { $ne: 1 } }
-  //         ]
-  //       });
-
-  //     return res.send({
-  //       status: true,
-  //       message: "Unread notifications",
-  //       data,
-  //       count
-  //     });
-  //   } catch (error) {
-  //     console.error("getAllNotification error:", error);
-  //     res.send({ status: false, message: "Something went wrong" });
-  //   }
-  // },
 
   async readMessage(req, res) {
     try {
