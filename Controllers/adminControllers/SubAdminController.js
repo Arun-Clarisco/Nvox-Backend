@@ -63,12 +63,10 @@ class subAdminMethods {
     lastId,
     commentlog
   ) => {
-    // console.log(req, typelog, lastId, commentlog);
     try {
       let browserlog = "";
       if (req && req.headers["user-agent"]) {
         let ua = req.headers["user-agent"].toLowerCase();
-        // console.log("ua", ua);
 
         if (/edg/i.test(ua)) {
           browserlog = "Edge";
@@ -85,13 +83,6 @@ class subAdminMethods {
         }
       }
 
-      //  ......correcct code
-      // const address = await axios.get("https://api.ipify.org/?format=json");
-
-      // const lastloginIpAddress = address.data.ip;
-      // console.log("lastloginIpAddress", lastloginIpAddress);
-      //  ......correcct code
-
       const adminlogdata = {
         ip: ip,
         browser: browserlog,
@@ -105,7 +96,6 @@ class subAdminMethods {
       // ✅ Insert directly into MongoDB
       let admininsertdata;
       admininsertdata = await subadminactvityDb.create(adminlogdata);
-      // console.log("admininsertdata", admininsertdata);
 
       return true;
     } catch (err) {
@@ -120,7 +110,6 @@ class subAdminMethods {
       if (adminId) {
         const createAdmin = await adminUser.findOne({ _id: adminId });
         const { email, adminPermissions, adminName, ip } = req.body;
-        // console.log("permissions---", adminPermissions);
 
         const existingAdmin = await adminUser.findOne({ email: email });
         let subAdminCreateencryptRes;
@@ -142,9 +131,7 @@ class subAdminMethods {
         });
 
         const SubAdminSaveData = await CreateSubAdmin.save();
-        // console.log("SubAdminSaveData---", SubAdminSaveData);
 
-        // this is call method abvoe adminactivity
         const adminactivityLog = await this.adminActivity(
           req,
           ip,
@@ -154,13 +141,8 @@ class subAdminMethods {
           SubAdminSaveData.email,
           "SubAdmin created successfully!"
         );
-        // console.log("adminactivityLog", adminactivityLog);
 
-        // 🟢 If SubAdmin created successfully, send forgot password mail
-        // 🟢 Forgot Password Link (Reset அல்ல)
         const forgotLink = `${Config.AdminPanel_URl}/forgot-password`;
-
-        // 🟢 Mail Body
         const emailBody = `
       <p>Hi ${SubAdminSaveData.adminName},</p>
       <p>Your  account has been created successfully.</p>
@@ -190,14 +172,7 @@ class subAdminMethods {
             message: "Failed to create SubAdmin.",
           });
         }
-        // console.log("subAdminCreateencryptRes", subAdminCreateencryptRes);
 
-        // return res.send({
-        //   status: true,
-        //   message: "SubAdmin created successfully.",
-        //   data: SubAdminSaveData,
-        //   emailBody: emailBody,
-        // });
         return res.send({ data: subAdminCreateencryptRes });
       } else {
         subAdminCreateencryptRes = encryptData({
@@ -220,9 +195,8 @@ class subAdminMethods {
       const page = parseInt(req.query.page);
       const limit = parseInt(req.query.limit);
       const skip = (page - 1) * limit;
-      // console.log("skip", skip);
       const search = req.query.search || "";
-      const status = req.query.status || ""; // "Active" அல்லது "Inactive"
+      const status = req.query.status || "";
 
       let query = { admin_type: "SubAdmin" };
 
@@ -232,14 +206,10 @@ class subAdminMethods {
           { email: { $regex: search, $options: "i" } },
         ];
       }
-      // console.log("search", search);
 
       if (status) {
         query.active_status = status;
       }
-      // console.log("status", status);
-
-      // console.log("query", query);
 
       const subAdminData = await adminUser
         .find(query)
@@ -248,8 +218,6 @@ class subAdminMethods {
         .sort({ _id: -1 })
         .exec();
       const total = await adminUser.countDocuments({ admin_type: "SubAdmin" });
-
-      // console.log("subAdminData---", subAdminData);
 
       return res.send({
         status: true,
@@ -270,30 +238,15 @@ class subAdminMethods {
       const adminId = res.locals.admin_id;
       if (adminId) {
         const updateadmin = await adminUser.findById({ _id: adminId });
-        // console.log("updateadmin", updateadmin);
-
         const { id } = req.params;
-        // console.log("editid---", id);
-
         const { email, adminPermissions, ip } = req.body;
-        // console.log("req.body;---", req.body);
-
         const findSubAdmin = await adminUser.findOne({ _id: id });
-        // console.log("findSubAdmin---", findSubAdmin);
 
         if (!findSubAdmin) {
           return res
             .status(404)
             .json({ status: false, message: "SubAdmin not found" });
         }
-        // const updateData = {
-        //   email,
-
-        //   adminPermissions,
-        // };
-        // const updatedAdmin = await adminUser.findByIdAndUpdate(id, updateData, {
-        //   new: true,
-        // });
 
         const updatedAdminData = await adminUser.findByIdAndUpdate(
           id,
@@ -332,22 +285,7 @@ class subAdminMethods {
           `subadmin Updated successfully ${finalDescription}`
         );
 
-        // update admin activity load
-        //  const editAdminactivityLog = await this.adminActivity(
-        //     req,
-        //     "SubAdmin Create",
-        //     updateadmin.email,
-        //     updateadmin.admin_type,
-        //     updatedAdminData.email,
-        //     "SubAdmin created successfully!"
-        //   );
 
-        // console.log("editSubadminEncryptRes", editAdminactivityLog);
-        // if(editAdminactivityLog){
-
-        // }else{
-
-        // }
         let editSubadminEncryptRes;
         if (editAdminactivityLog) {
           editSubadminEncryptRes = encryptData({
@@ -363,7 +301,6 @@ class subAdminMethods {
           });
         }
 
-        // console.log("editSubadminEncryptRes", editSubadminEncryptRes);
         if (editSubadminEncryptRes) {
           return res.send({
             data: editSubadminEncryptRes,
@@ -390,10 +327,7 @@ class subAdminMethods {
   getOneUserEditData = async (req, res) => {
     try {
       const { id } = req.params;
-      // console.log("id---", id);
-
       const OneuserEditData = await adminUser.findOne({ _id: id });
-      // console.log("userData---", OneuserEditData);
 
       if (!OneuserEditData) {
         return res
@@ -419,7 +353,6 @@ class subAdminMethods {
       const adminId = res.locals.admin_id;
       const { id } = req.params;
       const ip = req.body.ip;
-      //console.log("IP from frontend:", ip);
 
       if (!id) {
         return res.send({
@@ -429,10 +362,7 @@ class subAdminMethods {
       }
 
       const adminTypeData = await adminUser.findById({ _id: adminId });
-      //console.log("adminTypeData", adminTypeData);
-      // return;
       const deleteSubAdmin = await adminUser.findByIdAndDelete(id);
-      // console.log("deleted---", deleteSubAdmin);
       if (adminTypeData.admin_type == "SuperAdmin") {
         const deleteAdminActivity = await this.adminActivity(
           req,
@@ -454,19 +384,16 @@ class subAdminMethods {
       res
         .send({ status: false, message: "Error deleting Sub Admin" });
     }
-  };  
+  };
 
   //............. login user get data response...........
- 
+
   subAdminGetData = async (req, res) => {
     try {
       const subAdminId = res.locals.admin_id;
-      // console.log("subAdminId---", subAdminId);
 
       if (subAdminId && subAdminId !== null) {
         const subAdminData = await adminUser.findOne({ _id: subAdminId });
-        // console.log("subAdminData---", subAdminData);
-        // return;
         return res.send({ status: true, data: subAdminData });
       } else {
         return res.send({
@@ -484,7 +411,6 @@ class subAdminMethods {
     try {
       const adminId = res.locals.admin_id;
       const adminTypeData = await adminUser.findById({ _id: adminId });
-      // console.log("adminTypeData", adminTypeData);
 
       const { id } = req.params;
 
@@ -497,11 +423,9 @@ class subAdminMethods {
         });
       }
       const findAdmin = await adminUser.findOne({ _id: id });
-      // console.log("findAdmin---", findAdmin);
       if (findAdmin) {
         const adminActiveStatus =
           activestatus === "Active" ? "Active" : "Inactive";
-        // console.log('adminActiveStatus', adminActiveStatus);
         const updateStatus = await adminUser.findByIdAndUpdate(
           id,
           { $set: { active_status: adminActiveStatus } },
@@ -533,12 +457,7 @@ class subAdminMethods {
         return res.send({ data: activestatusEncryptRes });
       }
 
-      // console.log("updateStatus---", updateStatus);
-      // return res.send({
-      //   status: true,
-      //   message: `Sub Admin status changed successfully.`,
-      //   data: updateStatus,
-      // });
+
     } catch (error) {
       console.log("err", error);
       return res
@@ -551,36 +470,23 @@ class subAdminMethods {
   adminActivityGetData = async (req, res) => {
     try {
       const page = parseInt(req.query.page);
-      //console.log("page", page);
-
       const limit = parseInt(req.query.limit);
-      // console.log("limit", limit);
-      //
       const skip = (page - 1) * limit;
       const startDate = req.query.startDate;
-      // console.log("startDate-----", startDate);
-
       const endDate = req.query.endDate;
-      // console.log("endDate-----", endDate);
-
       let sortOrder = req.query.sortOrder;
-      // console.log("sortOrder-----", sortOrder, "typeof", typeof sortOrder);
 
       if (sortOrder) {
         if (sortOrder == 1) {
           sortOrder = 1;
         } else {
-          // console.log("work");
           sortOrder = -1;
         }
       }
-      // console.log("sortOrderAfer>>>", sortOrder);
       const search = (req.query.search || "").trim();
-      // console.log("search>>>", search);
 
       const status = req.query.status || "";
       const type = req.query.type || "";
-      // console.log("type>>", type);
       let query = {};
       if (search) {
         query.$or = [
@@ -589,45 +495,27 @@ class subAdminMethods {
         ];
       }
 
-      // console.log("search", search);
-
-      // if (status) {
-      //   query.active_status = status;
-      // }
       if (type) {
         query.type = type;
       }
       if (startDate && endDate) {
-        // console.log("startDate-----", startDate);
-        // console.log("endDate-----", endDate);
         const start = new Date(`${startDate}T00:00:00.000Z`);
         const end = new Date(`${endDate}T23:59:59.999Z`);
 
         query.dateTime = {
-          // $gte: new Date(new Date(startDate).setHours(0, 0, 0, 0)),
-          // $lte: new Date(new Date(endDate).setHours(23, 59, 59, 999)),
           $gte: start,
           $lte: end,
         };
       }
-      // console.log("startDate", startDate);
-      // console.log("endDate", endDate);
 
-      // console.log("query", query);
-
-      //console.log("skip", skip);
       const adminactivityData = await subadminactvityDb
         .find(query)
         .skip(skip)
         .limit(limit)
         .sort({ dateTime: sortOrder });
 
-      // console.log("adminactivityData>>>>", adminactivityData);
-
       const total = await subadminactvityDb.countDocuments(query);
 
-      // console.log("total---", total);
-      
       return res.send({
         status: true,
         data: adminactivityData,
@@ -644,15 +532,9 @@ class subAdminMethods {
     try {
       const adminId = res.locals.admin_id;
       const adminData = await adminUser.findById({ _id: adminId });
-      // console.log("adminData", adminData);
-      
       const { userId, lastloginIpAddress } = req.body;
-      const objectUserId = new mongoose.Types.ObjectId(userId); 
-     // console.log("objectUserId", objectUserId); 
-      
-       
+      const objectUserId = new mongoose.Types.ObjectId(userId);
       const TfaUserData = await UserDb.findOne({ _id: objectUserId });
-     // console.log("TfaUserData", TfaUserData);  
 
       let adminTfaDisableEncrypt;
 
@@ -668,12 +550,7 @@ class subAdminMethods {
           },
           { new: true }
         );
-        // console.log("TfaDisableUpdate", TfaDisableUpdate);
-        //   const emailBody = `
-        //   <p>Hello ${TfaDisableUpdate.first_name},</p>
-        //   <p>Your 2FA verification has been disabled by Admin.</p>
-        //   <p>If this was not done by you, please contact support immediately.</p>
-        // `;
+
         const emailBody = `
         <div style="font-family: Arial, sans-serif; line-height: 1.6;">
         <div style="text-align: center;">

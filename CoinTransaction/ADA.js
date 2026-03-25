@@ -7,9 +7,7 @@ const nodemailer = require("nodemailer");
 const hbs = require("nodemailer-express-handlebars");
 const Transaction = require("../Modules/userModule/Transaction");
 const ObjectId = mongoose.Types.ObjectId;
-const crypto = require("crypto");
 const AdminSettings = require("../Modules/adminModule/AdminSettings");
-const ADAWithdraw = require("../Modules/userModule/Withdrawhistory");
 const Cardano = require("@emurgo/cardano-serialization-lib-nodejs");
 const { BlockFrostAPI } = require("@blockfrost/blockfrost-js");
 const {
@@ -21,7 +19,6 @@ const {
 } = require("../Controllers/adminControllers/adminController");
 const { mnemonicToEntropy, generateMnemonic } = require("bip39");
 const bip39 = require("bip39");
-const axios = require("axios");
 const rpcUrl = require("../Config/rpcUrl");
 const Coindata = require("../Modules/userModule/pairData");
 const { Buffer } = require("buffer");
@@ -147,7 +144,6 @@ exports.ADACreateAddress = async (userId) => {
     currencyname: "ADA",
   });
   if (existingAddress) {
-    // console.log('ADA address already exists for this user.');
     return existingAddress;
   }
 
@@ -378,10 +374,8 @@ exports.AdaWithdraw = async (userId, data, req) => {
   try {
     const adminId = userId;
     const adminData = await adminUser.findOne({ _id: adminId });
-    // console.log("adminData", adminData);
 
     if (data.type == "approve") {
-      // console.log("data", data);
 
       let adminAddress;
       if (data.type == "approve") {
@@ -390,21 +384,15 @@ exports.AdaWithdraw = async (userId, data, req) => {
             { userId: userId },
             { ada_address: 1, ada_key: 1 }
           );
-          //  console.log("adminAddressAdmin---", adminAddress);
         } else {
           adminAddress = await AdminSettings.findOne({});
-          //  console.log("adminAddress", adminAddress);
         }
       }
-      //  console.log("adminAddress?.ada_key ", adminAddress?.ada_key);
 
       let adminKey = await decryptionKey(adminAddress?.ada_key);
-      // console.log("adminKey", adminKey);
 
       const fromAddress = adminAddress?.ada_address;
-      // console.log("fromAddress", fromAddress);
       const adaBalance = await getBalance(fromAddress);
-      // console.log("adaBalance", adaBalance);
 
 
       if (parseFloat(adaBalance) > parseFloat(data.amount)) {
@@ -416,7 +404,6 @@ exports.AdaWithdraw = async (userId, data, req) => {
           sendAmount,
           adminKey
         );
-        // console.log("signed>>", signed);
         if (signed) {
           const AdaSaveData = await userHistory(
             data.id,
@@ -424,11 +411,9 @@ exports.AdaWithdraw = async (userId, data, req) => {
             signed,
             2
           );
-          //  console.log("AdaSaveData", AdaSaveData);
           const withdrawAdaUser = await userDb.findById({
             _id: AdaSaveData.userId,
           });
-          // console.log("withdrawAdaUser", withdrawAdaUser);
           if (adminData.admin_type == "SuperAdmin") {
             const AdaAdminActivity = await subAdminMethods.adminActivity(
               req,
@@ -493,24 +478,19 @@ exports.AdaWithdraw = async (userId, data, req) => {
 exports.Ada_adminMove = async (ip, adminId, symbol, req) => {
   try {
     const SuperAdminData = await adminUser.findOne({ _id: adminId });
-    // console.log("SuperAdminData", SuperAdminData);
 
     const adminData = await AdminSettings.findOne(
       { userId: adminId },
       { ada_address: 1 }
     );
-    //console.log("adminData", adminData);
 
     const adminAddress = adminData.ada_address;
-    // const userData = await CoinAddress.find({ currencyname: symbol }, { address: 1, encData: 1, currencyname: 1 })
     const totalData = await Transaction.find(
       { moveCur: symbol, adminMoveStatus: 0 },
       { toaddress: 1 }
     );
-    //console.log("totalData", totalData);
 
     let userData = await getUnique(totalData, "toaddress");
-    // console.log(userData.length,"userdata>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>");
 
     let results = [];
     for (let i = 0; i < userData.length; i++) {
@@ -519,56 +499,41 @@ exports.Ada_adminMove = async (ip, adminId, symbol, req) => {
         { currencyname: symbol, address: userAddress },
         { encData: 1 }
       );
-      // c/onsole.log("users", users);
 
       const userPrivateKey = users.encData;
-      //console.log("userPrivateKey>>>>", userPrivateKey);
 
       const adaBalance = await getBalance(userAddress);
 
-      // console.log("adaBalance", adaBalance);
 
-      // console.log(adaBalance,"adaBalance")
       if (parseFloat(adaBalance) >= parseFloat(rpcUrl.adaconfig.minBal)) {
-        // console.log("work");
         const totalAmnt = Number(adaBalance) - 0.2; // Subtracting 0.2 ADA as a buffer
-        // console.log("totalAmnt", totalAmnt);
 
         const weiAmount = Math.round(totalAmnt * 1e6);
-        // console.log("weiAmount", weiAmount);
 
         const sendAmount = Cardano.BigNum.from_str(weiAmount.toString());
-        // console.log("sendAmount", sendAmount);
 
         const outputValue = Cardano.Value.new(
           Cardano.BigNum.from_str(weiAmount.toString())
         );
-        //console.log("outputValue", outputValue);
 
         const output = Cardano.TransactionOutput.new(
           Cardano.Address.from_bech32(adminAddress),
           Cardano.Value.new(sendAmount)
         );
-        // console.log("output", output);
 
         const dataCost = Cardano.DataCost.new_coins_per_byte(
           Cardano.BigNum.from_str("4310")
         );
-        //console.log("dataCost", dataCost);
 
         const minAda = Cardano.min_ada_for_output(output, dataCost);
-        //console.log("minAda", minAda);
         const whywrong = outputValue.coin().compare(minAda) < 0;
-        //console.log("whywrong", whywrong);
 
         if (outputValue.coin().compare(minAda) < 0) {
-          // console.log("work--2");
           results.push({
             status: false,
             message: "No eligible deposits to move.",
           });
         } else {
-          // console.log("work--3");
 
           const signed = await coinTransfer(
             userAddress,
@@ -576,7 +541,6 @@ exports.Ada_adminMove = async (ip, adminId, symbol, req) => {
             sendAmount,
             userPrivateKey
           );
-          // console.log("signed",signed);
 
           if (signed) {
             const adahistorysave = await adminHistory(
@@ -586,13 +550,11 @@ exports.Ada_adminMove = async (ip, adminId, symbol, req) => {
               symbol,
               signed
             );
-            // console.log("adahistorysave", adahistorysave);
 
             const AdaAdminMoveData = await adminMovedStatus(
               userAddress,
               symbol
             );
-            //console.log("AdaAdminMoveDataawait", AdaAdminMoveData);
 
             results.push({ status: true, message: "Admin Transfer Completed" });
             const AdaAdminMoveActivity = await subAdminMethods.adminActivity(
@@ -604,7 +566,6 @@ exports.Ada_adminMove = async (ip, adminId, symbol, req) => {
               symbol,
               `${symbol} moved to Admin Wallet`
             );
-            // console.log("AdaAdminMoveActivity", AdaAdminMoveActivity);
           }
         }
       } else {
@@ -631,7 +592,6 @@ const coinTransferWithdraw = async (
   mnemonic
 ) => {
   try {
-    //   console.log(mnemonic, "mnemonic");
     const entropy = bip39.mnemonicToEntropy(mnemonic);
 
     const rootKey = Cardano.Bip32PrivateKey.from_bip39_entropy(
@@ -720,7 +680,6 @@ const coinTransferWithdraw = async (
 
     // Step 5: Submit the transaction
     const txHashResult = await API.txSubmit(signedTxHex);
-    // console.log("Transaction submitted! Hash:", txHashResult);
     return txHashResult;
   } catch (error) {
     console.error("coin Transfer Error:", error);
@@ -856,12 +815,9 @@ const coinTransfer = async (senderAddrStr, toAddr, sendAmount, mnemonic) => {
     const finalVkeyWitnesses = Cardano.Vkeywitnesses.new();
     finalVkeyWitnesses.add(Cardano.make_vkey_witness(txHash, paymentKey));
     witnessesFinal.set_vkeys(finalVkeyWitnesses);
-
     const signedTx = Cardano.Transaction.new(txBody, witnessesFinal);
     const signedTxHex = Buffer.from(signedTx.to_bytes()).toString("hex");
-
     const txHashResult = await API.txSubmit(signedTxHex);
-    //   console.log("Transaction submitted! Hash:", txHashResult);
     return txHashResult;
   } catch (error) {
     console.error("coin Transfer Error:", error);

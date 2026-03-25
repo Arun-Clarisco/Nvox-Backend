@@ -147,11 +147,8 @@ class AdminController {
   // create
 
   decryptionKey = async (key) => {
-    // console.log("key---", key);
     const bytes = CryptoJS.AES.decrypt(key, Config.AdminencdcrKey);
-    // console.log("bytes", bytes);
     const originalText = bytes.toString(CryptoJS.enc.Utf8);
-    // console.log(originalText, "------originalText");
     return originalText;
   };
 
@@ -195,7 +192,6 @@ class AdminController {
 
   userDepositUpdate = async (id, amount, symbol) => {
     try {
-      // console.log('symbol----', symbol)
       const userData = await userBalance.findOne({ userId: id });
       let updateBalance, updateUserBalance;
       switch (symbol.toUpperCase()) {
@@ -232,7 +228,6 @@ class AdminController {
         default:
           return res.status(400).json({ error: "Invalid currency symbol" });
       }
-      // console.log('updateBalance-----', updateBalance)
       if (!userData) {
         let userBal = new userBalance({ updateBalance });
         updateUserBalance = await userBal.save();
@@ -243,7 +238,6 @@ class AdminController {
           { new: true }
         );
       }
-      // console.log('updateUserBalance----', updateUserBalance)
       return updateUserBalance;
     } catch (error) {
       console.error("User history update error:", error);
@@ -254,10 +248,7 @@ class AdminController {
   rejectUserRequest = async (data, totalAmnt, req, adminId) => {
     try {
       const userData = await userBalance.findOne({ userId: data.userId });
-      // console.log("userData----", userData);
-
       const adminData = await adminUser.findById({ _id: adminId }).exec();
-      //console.log('adminData----', adminData);
 
       let updateBalance;
 
@@ -303,18 +294,13 @@ class AdminController {
         { $set: { status: 0, reason: req.body.reason } },
         { new: true }
       );
-      // console.log("rejectHistory----", rejectHistory);
 
       const rejectUser = await userDb.findById({ _id: rejectHistory.userId });
-
-      // console.log("rejectUser----", rejectUser);
-
       const rejectBal = await userBalance.findOneAndUpdate(
         { userId: data.userId },
         { $set: updateBalance },
         { new: true }
       );
-      //console.log("rejectBal----", rejectBal);
       if (adminData.admin_type == "SuperAdmin") {
         const RejectAdminActivity = await subAdminMethods.adminActivity(
           req,
@@ -362,8 +348,6 @@ class AdminController {
       let subject = "Withdrawal Rejected";
       forgetPassMailSend(rejectUser.email, subject, bodyData);
 
-      //console.log("AdaRejectAdminActivity", AdaRejectAdminActivity);
-
       return true;
     } catch (error) {
       console.error("User history update error:", error);
@@ -398,7 +382,6 @@ class AdminController {
         admin_type: "SuperAdmin",
       });
       const value = await data.save();
-      // console.log("value---", value);
 
       if (value) {
         res.status(200).send({
@@ -421,7 +404,6 @@ class AdminController {
     try {
       const { email, ip } = req.body;
       var Admin = await adminUser.findOne({ email: email });
-      // console.log("Admin", Admin);
 
       if (Admin) {
         if (
@@ -440,7 +422,6 @@ class AdminController {
           Config.AdminencdcrKey
         );
         var originalText = bytes.toString(CryptoJS.enc.Utf8);
-        // console.log("originalText", originalText);
         if (originalText !== req.body.password) {
           return res.send({ status: false, message: "Invalid password" });
         } else {
@@ -468,7 +449,6 @@ class AdminController {
                 Admin.email,
                 "Login Into Admin Panel"
               );
-              // console.log("dataval", dataval);
             } else {
               dataval = await subAdminMethods.adminActivity(
                 req,
@@ -479,7 +459,6 @@ class AdminController {
                 Admin.email,
                 "Login Into Admin Panel"
               );
-              // console.log("dataval", dataval);
             }
 
             const adminencryptedResponse = encryptData({
@@ -590,7 +569,6 @@ class AdminController {
   adminResetpassword = async (req, res) => {
     try {
       const { token } = req.body;
-      // console.log('token', token)
 
       if (!token || token === null || token === undefined) {
         return res.send({ status: false, message: "Token is required" });
@@ -598,7 +576,6 @@ class AdminController {
       const adminResetTokenused = await adminResetToken.findOne({
         adminResetToken: token,
       });
-      // console.log('adminResetTokenused', adminResetTokenused);
 
       if (adminResetTokenused) {
         return res.send({
@@ -608,11 +585,7 @@ class AdminController {
       }
 
       const verify = jwt.verify(token, Config.MAIL_CONFIRM_SECRET);
-      //console.log('verify', verify);
-
       const AdminId = verify.id;
-      //console.log('AdminId', AdminId);
-
       const password = CryptoJS.AES.encrypt(
         req.body.password,
         Config.AdminencdcrKey
@@ -625,7 +598,6 @@ class AdminController {
       const admintokencreate = await adminResetToken.create({
         adminResetToken: token,
       });
-      // console.log('admintokencreate', admintokencreate);
 
       res.send({ status: true, message: "Password Updated Successfully.." });
     } catch (error) {
@@ -652,7 +624,6 @@ class AdminController {
         .findOne({ user_id: datas.id })
         .sort({ _id: -1 })
         .then((resp) => {
-          // console.log('resp--',resp);
           res.send({ status: true, message: "Get the KYC form ", resp });
         })
         .catch(() => {
@@ -666,7 +637,6 @@ class AdminController {
   get_Individualform = async (req, res) => {
     const id = res.locals.admin_id;
     const datas = req.body;
-    // console.log('datas--',datas);
     try {
       if (!id) {
         return res.send({ status: false, message: "Invalid Admin Login..." });
@@ -675,7 +645,6 @@ class AdminController {
         .findOne({ user_id: datas.id })
         .sort({ _id: -1 })
         .then((resp) => {
-          // console.log('resp--',resp);
           res.send({ status: true, message: "Get the Individualform ", resp });
         })
         .catch(() => {
@@ -689,7 +658,6 @@ class AdminController {
   get_Businessform = async (req, res) => {
     const id = res.locals.admin_id;
     const datas = req.body;
-    // console.log('datas--',datas);
     try {
       if (!id) {
         return res.send({ status: false, message: "Invalid Admin Login..." });
@@ -698,7 +666,6 @@ class AdminController {
         .findOne({ user_id: datas.id })
         .sort({ _id: -1 })
         .then((resp) => {
-          // console.log('resp--',resp);
           res.send({ status: true, message: "Get the Businessform ", resp });
         })
         .catch(() => {
@@ -713,13 +680,10 @@ class AdminController {
     const id = res.locals.admin_id;
     const adminTypeData = await adminUser.findById({ _id: id });
     const supportEmail = Config.mailFromAddress1;
-    // console.log("adminTypeData", adminTypeData);
     let deleteBy = "";
     const UserlistId = req.body.userListID;
-    // console.log('UserlistId-----', UserlistId)
     const type = req.body.type;
     const ip = req.body.ip;
-    // console.log("type", type);
 
     if (type == "Delete") {
       deleteBy = req.body.deleteBy;
@@ -770,7 +734,6 @@ class AdminController {
               `User ${userData.email}  has been Deleted`
             );
           }
-          //console.log("deleteUser", deleteUser);
 
           if (value) {
             const datas = fs.readFileSync(accountmail, "utf8");
@@ -802,7 +765,6 @@ class AdminController {
             res.send({ status: true, message: "User Data is Not Deleted" });
           }
         } else if (type == "Deactive") {
-          console.log("Deactive called");
 
           const userAcc = await userModule.findByIdAndUpdate(
             { _id: UserlistId },
@@ -813,7 +775,6 @@ class AdminController {
             }
           );
           if (userAcc) {
-            // console.log('userAcc----', userAcc)
             let socket = socketHelper.GetSocket();
             socket.emit("userLogout", {
               status: true,
@@ -954,21 +915,16 @@ class AdminController {
 
       if (type == "KycDelete") {
         const kyc = await userKyc.findOne({ _id: FormId });
-        // console.log(kyc.user_id, "kycsgetforms");
         const individual = await userIndiviuals.findOne({
           user_id: kyc.user_id,
         });
-        // console.log(kyc.user_id, "individual");
 
         const business = await userBusiness.findOne({ user_id: kyc.user_id });
-        // console.log(kyc.user_id, "business");
 
         const hasIndividual =
           !!individual && Object.keys(individual).length > 0;
         const hasBusiness = !!business && Object.keys(business).length > 0;
 
-        // console.log(hasIndividual && hasBusiness, "first");
-        // console.log(hasBusiness, "hasBusiness");
 
         if (hasIndividual && hasBusiness) {
           res.send({
@@ -990,14 +946,11 @@ class AdminController {
         }
       } else if (type == "IndividualDelete") {
         const individual = await userIndiviuals.findOne({ _id: FormId });
-        // console.log("individual", individual);
         const business = await userBusiness.findOne({
           user_id: individual.user_id,
         });
-        // console.log("business", business);
 
         const hasBusiness = !!business && Object.keys(business).length > 0;
-        // console.log("hasBusiness", hasBusiness);
         if (hasBusiness) {
           res.send({
             status: true,
@@ -1019,14 +972,12 @@ class AdminController {
   FormsDelete = async (req, res) => {
     const id = res.locals.admin_id;
     const loginadminData = await adminUser.findOne({ _id: id });
-    // console.log("logloginadminData", loginadminData);
 
     try {
       if (!id) {
         return res.send({ status: false, message: "Invalid Admin Login..." });
       }
       const { FormId, type, ip } = req.body;
-      //console.log("formId", FormId);
 
       if (type == "KycDelete") {
         const kyc = await userKyc.findOne({ _id: FormId });
@@ -1041,11 +992,8 @@ class AdminController {
 
         const hasBusiness = !!business && Object.keys(business).length > 0;
 
-        // console.log(hasIndividual)
-        // ...........hasIndividual  == true && hasBusiness == true.........
 
         if (hasIndividual && hasBusiness) {
-          // console.log("first--------------  ");
 
           const businessform = await userBusiness.findOneAndDelete({
             user_id: kyc.user_id,
@@ -1077,13 +1025,11 @@ class AdminController {
             );
           }
 
-          //console.log("threeformDelete----", threeformDelete);
           const KycencryptedResponse = encryptData({
             status: true,
             message: "KYC data deleted successfully!",
             value,
           });
-          // console.log("KycencryptedResponse", KycencryptedResponse);
 
           if (KycencryptedResponse) {
             res.send({ data: KycencryptedResponse });
@@ -1093,7 +1039,6 @@ class AdminController {
         }
         // .........hasIndividual  == true.........
         else if (hasIndividual) {
-          // console.log("working>>>>>>>>>>>");
           const userIndiviualsData = await userIndiviuals.findOneAndDelete({
             user_id: kyc.user_id,
           });
@@ -1124,9 +1069,7 @@ class AdminController {
             message: "KYC data deleted successfully!",
             value,
           });
-          // console.log("KycencryptedResponse", KycencryptedResponse);
-
-          //console.log("hasIndividualDelete", hasIndividualDelete);
+          
 
           if (KycencryptedResponse) {
             res.send({ data: KycencryptedResponse });
@@ -1136,10 +1079,8 @@ class AdminController {
         }
         // ........kycOnlyDelete........
         else {
-          //console.log("kyc");
 
           const value = await userKyc.findByIdAndDelete({ _id: FormId });
-          // console.log("lastkyc", value);
           if (loginadminData.admin_type == "SuperAdmin") {
             const kycOnlyDelete = await subAdminMethods.adminActivity(
               req,
@@ -1166,9 +1107,7 @@ class AdminController {
             message: "KYC data deleted successfully!",
             value,
           });
-          // console.log("KycencryptedResponse", KycencryptedResponse);
-
-          //onsole.log("kycOnlyDelete", kycOnlyDelete);
+          
           if (KycencryptedResponse) {
             res.send({ data: KycencryptedResponse });
           } else {
@@ -1179,7 +1118,6 @@ class AdminController {
 
       //................ ........IndividualDelete................................
       else if (type == "IndividualDelete") {
-        // console.log("third");
 
         const individual = await userIndiviuals.findOne({ _id: FormId });
 
@@ -1188,7 +1126,6 @@ class AdminController {
         });
 
         const hasBusiness = !!business && Object.keys(business).length > 0;
-        // console.log("hasBusiness", hasBusiness);
 
         if (hasBusiness) {
           await userBusiness.findOneAndDelete({ user_id: individual.user_id });
@@ -1219,9 +1156,7 @@ class AdminController {
             message: "Individual hasBusiness Data Deleted!",
             value,
           });
-          // console.log("individualencryptedRes", individualencryptedRes);
-
-          //nsole.log("individualAndBusiness", value);
+          
           if (individualencryptedRes) {
             res.send({
               data: individualencryptedRes,
@@ -1233,7 +1168,6 @@ class AdminController {
             });
           }
         } else {
-          //console.log("Individual -----");
           const value = await userIndiviuals.findByIdAndDelete({ _id: FormId });
           // which admin has  delete if and else part
 
@@ -1263,9 +1197,7 @@ class AdminController {
             message: "Individual Data Deleted!",
             value,
           });
-          // console.log("individualencryptedRes", individualencryptedRes);
-
-          //onsole.log("individualOnlyDelete", individualOnlyDelete);
+          
           if (individualencryptedRes) {
             res.send({
               data: individualencryptedRes,
@@ -1280,7 +1212,6 @@ class AdminController {
       }
       // business form delete
       else if (type == "BusinessDelete") {
-        // console.log("fourth");
 
         const value = await userBusiness.findByIdAndDelete({ _id: FormId });
         if (loginadminData.admin_type == "SuperAdmin") {
@@ -1309,20 +1240,13 @@ class AdminController {
           message: "Business Data Deleted",
           value,
         });
-        // console.log("BusinessencryptedRes", BusinessencryptedRes);
-
-        //console.log("kycOnlyDelete", kycOnlyDelete);
+       
         if (BusinessencryptedRes) {
           res.send({ data: BusinessencryptedRes });
         } else {
           res.send({ status: true, message: "Business Data is Not Deleted" });
         }
-        //console.log("BusinessDelete", BusinessDelete);
-        // if (value) {
-        //   res.send({ status: true, message: "Business Data Deleted", value });
-        // } else {
-        //   res.send({ status: true, message: "Business Data is Not Deleted" });
-        // }
+        
       }
     } catch (error) {
       console.log(error);
@@ -1409,15 +1333,7 @@ class AdminController {
           res.send({ status: true, message, adminData });
         }
       }
-      // const adminAddressencryptedRes = encryptData({
-      //   status: true,
-      //   message,
-      //   adminData,
-      // });
-      // console.log("adminAddressencryptedRes", adminAddressencryptedRes);
-
-      // res.send({ status: true, message, adminData });
-      // return res.send({adminData);
+      
     } catch (error) {
       console.error("Error in adminAddress:", error);
       res.status(500).json({ status: false, message: "Something went wrong" });
@@ -1435,7 +1351,6 @@ class AdminController {
       search = "",
     } = req.query;
     try {
-      // console.log(search);
       if (!id) {
         return res.send({ status: false, message: "Invalid Admin Login..." });
       }
@@ -1517,7 +1432,6 @@ class AdminController {
       ];
 
       const adminData = await adminTransferHistory.aggregate(pipeline);
-      // console.log(adminData.length, "adminData");
 
       const countAggregation = await adminTransferHistory.aggregate([
         { $match: matchQuery },
@@ -1598,8 +1512,6 @@ class AdminController {
   sendPushNotification = async (req, res) => {
     const adminId = res.locals.admin_id;
     const adminData = await adminUser.findById({ _id: adminId });
-    // console.log("adminData", adminData);
-    //return;
 
     let pushNotification = req.body;
     const notificationres = await Notification.create({
@@ -1609,7 +1521,6 @@ class AdminController {
     })
 
       .then((response) => {
-        // console.log("notification", response);
         const socket = socketHelper.GetSocket();
         socket.emit("notification", { response });
         return res.send({ status: true, message: "push notification sent" });
@@ -1639,14 +1550,10 @@ class AdminController {
       );
     }
 
-    // console.log("pairUpdateadminActivity", NotificationadminActivity);
-    // console.log("notificationres", notificationres);
   };
 
   coinfeesetting = async (req, res) => {
     const admin_id = res.locals.admin_id;
-    // console.log("admin_id", admin_id);
-    // console.log("req", req.body);
     const { BTCUSDT, ETHUSDT, SOLUSDT, ADAUSDT, LTCUSDT, USDT } = req.body;
 
     if (!admin_id) {
@@ -1726,7 +1633,6 @@ class AdminController {
   updateSiteSetting = async (req, res) => {
     const admin_id = res.locals.admin_id;
     const UpdateAdmin = await adminUser.findOne({ _id: admin_id });
-    // console.log("UpdateAdmin", UpdateAdmin);
 
     const {
       emailSubject,
@@ -1735,13 +1641,10 @@ class AdminController {
       copyright,
       resendOTPexpireTime,
       logoPosition,
-      lastLine,
       ip,
     } = req.body;
-    // console.log("data--", req.body);
 
     const logo = req.file ? req.file.path : null;
-    // console.log("logo--", logo);
 
     if (!admin_id) {
       return res.status(400).json({ error: "User ID is required." });
@@ -1763,10 +1666,8 @@ class AdminController {
           resendOTPexpireTime || existingSetting.resendOTPexpireTime;
         existingSetting.logoPosition =
           logoPosition || existingSetting.logoPosition;
-        existingSetting.lastLine = lastLine || existingSetting.lastLine;
 
         const siteSettingdata = await existingSetting.save();
-        // console.log("siteSettingdata", siteSettingdata);
         if (UpdateAdmin.admin_type == "SuperAdmin") {
           const siteSettingActivity = await subAdminMethods.adminActivity(
             req,
@@ -1804,7 +1705,6 @@ class AdminController {
           logo: logo || "",
           resendOTPexpireTime: resendOTPexpireTime || "",
           logoPosition: logoPosition || "center",
-          lastLine: lastLine || "",
         });
 
         await newSetting.save();
@@ -1850,7 +1750,6 @@ class AdminController {
   getCopyRightsData = async (req, res) => {
     try {
       const CopyRightsData = await SettingData.find({});
-      // console.log("CopyRightsData", CopyRightsData);
       if (CopyRightsData) {
         return res.send({
           status: true,
@@ -1873,15 +1772,12 @@ class AdminController {
   CreateTermsPage = async (req, res) => {
     try {
       const { Title, TermsContent } = req.body;
-      // console.log("req.body", req.body);
       const TermsPageData = await new TermSchema({
         Title: Title,
         TermsContent: TermsContent,
       });
-      // console.log("TermsPageData", TermsPageData);
       if (TermsPageData) {
         const saveData = await TermsPageData.save();
-        // console.log("saveData", saveData);
 
         return res.send({
           status: true,
@@ -1904,7 +1800,6 @@ class AdminController {
   getTermspageData = async (req, res) => {
     try {
       const TermsPageGetData = await TermSchema.find({});
-      // console.log("TermsPageGetData", TermsPageGetData);
       if (TermsPageGetData) {
         return res.send({
           status: true,
@@ -1923,12 +1818,8 @@ class AdminController {
     try {
       const adminId = res.locals.admin_id;
       const adminData = await adminUser.findById({ _id: adminId });
-      // console.log("adminData", adminData);
       const { _id } = req.params;
-      // console.log("req.params", req.params);
-
       const { Title, TermsContent, ip } = req.body;
-      // console.log("req.body", req.body);
       const TermsEditData = await TermSchema.findByIdAndUpdate(
         {
           _id: _id,
@@ -1943,7 +1834,6 @@ class AdminController {
           new: true,
         }
       );
-      // console.log("TermsEditData", TermsEditData);
       if (adminData.admin_type == "SuperAdmin") {
         const editTermsAdminActivity = await subAdminMethods.adminActivity(
           req,

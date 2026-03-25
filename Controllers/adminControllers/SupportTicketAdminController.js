@@ -102,9 +102,7 @@ const supportTicketAdminController = {
 
   async replayTicket(req, res) {
     const data = req.body;
-    // console.log("replayTicket---", data);
     const AdminId = res.locals.admin_id;
-    // console.log("AdminId---", AdminId);
     let io = socketHelper.GetSocket();
 
     let datas = {};
@@ -139,10 +137,7 @@ const supportTicketAdminController = {
           { _id: data.ticketId },
           { $addToSet: { chatHistory: datas.chattingHistory } }
         );
-        // console.log("result--",result);
         const userId = await Ticket.findById(data.ticketId).lean();
-        // console.log("userId--",userId);
-
         const tickets = await Ticket.find()
           .where({ userId: userId.userId })
           .populate({ path: "userId", select: "email first_name" })
@@ -155,7 +150,6 @@ const supportTicketAdminController = {
         ).length;
 
         if (result) {
-          // console.log("data.ticketId==", data.ticketId);
           const findEmail = await Users.findOne({ _id: userId.userId });
           if (findEmail != "") {
             let email = findEmail.email;
@@ -221,7 +215,6 @@ const supportTicketAdminController = {
           console.log("hi");
         }
       }
-      // const file = req.files;
     } catch (err) {
       if (err) throw err;
     }
@@ -229,20 +222,13 @@ const supportTicketAdminController = {
 
   async closeTicket(req, res) {   
     const data = req.body;
-  //  console.log("wholedata", data);
     let admin_id = res.locals.admin_id;
     let io = socketHelper.GetSocket();
-
-    // console.log("closeTicket----", data);
 
     try {
       const adminId = await Admin.findOne({ _id: admin_id });
       const ticketData = await Ticket.findOne({ _id: data.ticketId });
-      // console.log("ticketData---", ticketData);
       const UserData = await UserDb.findOne({ _id: ticketData.userId });
-      // console.log("UserData", UserData);
-
-      // return
       if (adminId) {
         const result = await Ticket.findOneAndUpdate(
           { _id: data.ticketId },
@@ -253,7 +239,6 @@ const supportTicketAdminController = {
         if (result) {
           if (data.status == 0) {
             const findEmail = await Users.findOne({ _id: ticketData.userId });
-            // console.log("findEmail---", findEmail);
 
             if (findEmail != "") {
               let email = findEmail.email;
@@ -312,7 +297,6 @@ const supportTicketAdminController = {
               let TicketOpenAdminActivity;
               if (encryptedResponse) {
                 if (adminId.admin_type == "SuperAdmin") {
-                  console.log("dataone--", data.ip);
 
                   TicketOpenAdminActivity = await adminActivity(
                     req,
@@ -347,7 +331,6 @@ const supportTicketAdminController = {
             let TicketCloseAdminActivity;
             if (encryptedResponse) { 
               if (adminId.admin_type == "SuperAdmin") { 
-                console.log("datatwo--", data.ip);
                 TicketCloseAdminActivity = await adminActivity(
                   req,
                   data.ip,
@@ -428,7 +411,6 @@ const supportTicketAdminController = {
           issueTitle: { $regex: getdata.type, $options: "i" },
         };
         const issues = await IssueModel.find(issueMatchQ, { _id: 1 });
-        //   console.log("issues---",issues.length);
 
         if (issues && issues.length > 0) {
           const issueIds = issues.map((i) => i._id);
@@ -446,7 +428,6 @@ const supportTicketAdminController = {
       // ===== Search Query (User / Ticket ID) =====
       if (getdata.search && getdata.search.trim() !== "") {
         const query = getdata.search.trim();
-        //   console.log("query==",query);
 
         if (!isNaN(query)) {
           // numeric ticketId search
@@ -460,10 +441,8 @@ const supportTicketAdminController = {
           };
 
           const users = await Users.find(userMatchQ, { _id: 1 });
-          // console.log("users---",users.length);
           if (users && users.length > 0) {
             const userIds = users.map((u) => u._id);
-            //   console.log("userIds---",userIds);
 
             matchQ.userId = { $in: userIds };
           } else {
@@ -500,9 +479,7 @@ const supportTicketAdminController = {
 
   async updateImages(req, res) {
     try {
-      // console.log("updateImages");
 
-      // ✅ req.files may be array (for multiple) or object (if using fields)
       const files = req.files || [];
 
       if (!files || files.length === 0) {

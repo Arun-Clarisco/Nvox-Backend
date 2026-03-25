@@ -23,8 +23,6 @@ let nodeUrl = jsonrpc.ethconfig.host;
 let provider = new Web3.providers.HttpProvider(nodeUrl);
 const web3 = new Web3(provider);
 const ObjectId = mongoose.Types.ObjectId;
-const IV_LENGTH = 16;
-const ENCRYPTION_KEY = "abcdef1234567890ABCDEF1234567890";
 const crypto = require("crypto");
 const {
   decryptionKey,
@@ -117,31 +115,6 @@ const PassMailSend = (to, sub, emailBody) => {
   }
 };
 
-
-// const encryptbtc = (privateKey) => {
-//     try {
-//         const iv = crypto.randomBytes(IV_LENGTH);
-//         const cipher = crypto.createCipheriv('aes-256-cbc', Buffer.from(ENCRYPTION_KEY, 'utf8'), iv);
-//         let encrypted = cipher.update(privateKey, 'utf8', 'hex');
-//         encrypted += cipher.final('hex');
-//         return JSON.stringify({ iv: iv.toString('hex'), encryptedData: encrypted });
-//     } catch (err) {
-//         console.error("Encryption Error: ", err);
-//         return null;
-//     }
-// };
-// const decryptbtc = (encryptedString) => {
-//     try {
-//         const { iv, encryptedData } = JSON.parse(encryptedString);
-//         const decipher = crypto.createDecipheriv('aes-256-cbc', Buffer.from(ENCRYPTION_KEY, 'utf8'), Buffer.from(iv, 'hex'));
-//         let decrypted = decipher.update(encryptedData, 'hex', 'utf8');
-//         decrypted += decipher.final('utf8');
-//         return decrypted;
-//     } catch (err) {
-//         console.error("Decryption Error: ", err);
-//         return null;
-//     }
-// };
 
 function getUnique(arr, index) {
   const unique = arr

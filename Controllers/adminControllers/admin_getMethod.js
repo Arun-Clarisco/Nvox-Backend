@@ -17,7 +17,7 @@ const { adminActivity } = require("./SubAdminController");
 function escapeRegex(text) {
   return text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
-const { encryptData, decryptData } = require("../../Config/Security"); 
+const { encryptData, decryptData } = require("../../Config/Security");
 class AdmingetMethods {
   getuserdetails = async (req, res) => {
     const id = res.locals.admin_id;
@@ -57,7 +57,6 @@ class AdmingetMethods {
       let safeSearch = "";
       if (search) {
         safeSearch = escapeRegex(search);
-        // console.log('safeSearch :>> ', safeSearch);
 
         matchStage.$or = [
           { kyc_applicantID: { $regex: safeSearch, $options: "i" } },
@@ -150,7 +149,6 @@ class AdmingetMethods {
         if (statusNum == 2) {
           pipeline.push({ $match: { individualStatus: 2 } });
         } else if (statusNum == 1) {
-          // console.log('statusNum :>> ', statusNum);
           pipeline.push({ $match: { individualStatus: { $in: [0, 1] } } });
           pipeline.push({
             $match: {
@@ -161,7 +159,6 @@ class AdmingetMethods {
             },
           });
         } else if (statusNum == 4) {
-          // pipeline.push({ $match: { individualStatus: { $ne: [1, 2] } } });
           pipeline.push({
             $match: {
               individualData: { $eq: [] },
@@ -199,7 +196,6 @@ class AdmingetMethods {
         { $skip: skip },
         { $limit: Number(limitUser) },
       ]);
-      // console.log('userData :>> ', userData);
 
       const totalPages =
         totalUsers.length > 0 ? Math.ceil(totalUsers[0].count / limitUser) : 0;
@@ -249,8 +245,7 @@ class AdmingetMethods {
       fromDate,
       toDate,
     } = req.query;
-    // console.log('query', page ,limit ,search); 
-    
+
     try {
       if (!id) {
         return res.send({ status: false, message: "Invalid Admin Login..." });
@@ -281,11 +276,7 @@ class AdmingetMethods {
       }
 
       const userData = await Withdrawhistory.aggregate([
-        // {
-        //     $match: {
-        //         status: 1
-        //     }
-        // },
+
         {
           $lookup: {
             from: "users",
@@ -315,9 +306,8 @@ class AdmingetMethods {
         { $sort: { _id: 1 } },
         { $skip: (page - 1) * limit },
         { $limit: Number(limit) },
-      ]); 
-      // console.log("userData>>>>>>>>", userData);   
-      // console.log("userData>>>>>>>>", userData.length);   
+      ]);
+
 
       const countAggregation = await Withdrawhistory.aggregate([
         {
@@ -332,7 +322,6 @@ class AdmingetMethods {
         { $match: { $and: matchConditions } },
         { $count: "total" },
       ]);
-      // console.log("countAggregation", countAggregation);
 
       const totalRecords =
         countAggregation.length > 0 ? countAggregation[0].total : 0;
@@ -343,9 +332,8 @@ class AdmingetMethods {
       }
 
       res.send({ status: true, data: userData, totalPages, totalItems });
-    } catch (error) { 
-      console.error("userDataerr:", error);   
-
+    } catch (error) {
+      console.error("userDataerr:", error);
       res.status(500).json({ status: false, message: "something went wrong" });
     }
   };
@@ -363,7 +351,6 @@ class AdmingetMethods {
       status,
       moveStatus,
     } = req.query;
-    // console.log('req.query--', req.query)
     try {
       if (!id) {
         return res.send({ status: false, message: "Invalid Admin Login..." });
@@ -417,7 +404,6 @@ class AdmingetMethods {
       if (matchConditions.length > 0) {
         pipeline.push({ $match: { $and: matchConditions } });
       }
-      // console.log('matchConditions', matchConditions);
 
       if (status !== undefined && status !== "") {
         const statusNum = Number(status);
@@ -443,7 +429,7 @@ class AdmingetMethods {
           createdDate: 1,
           adminMoveStatus: 1,
           "userData.email": 1,
-          reason:1
+          reason: 1
         },
       });
 
@@ -494,173 +480,94 @@ class AdmingetMethods {
     }
   };
 
-  // adminupdatespotpair = async (req, res) => {
-  //   try {
-  //     const adminId = res.locals.admin_id;
-  //     const updateadmin = await adminUser.findOne({ _id: adminId });
-  //     console.log("updateadmin", updateadmin);
-
-  //     const data = req.body;
-  //     console.log("data", data);
-  //     let allData = await pairData.find({ _id: data.id }).exec();
-  //     console.log("allData", allData);
-
-  //     if (allData.length > 0) {
-  //       let updated = await pairData.findByIdAndUpdate(data.id, {
-  //         $set: {
-  //           minimumTradeTotal: data.minimumTradeTotal,
-  //           makerFee: data.makerFee,
-  //           takerFee: data.takerFee,
-  //           withdrawFee: data.withdrawFee,
-  //           swapFee: data.swapFee,
-  //           withdrawMinimumAmount: data.MinimumAmount,
-  //         },
-  //       });
-  //       console.log("updated", updated);
-  //       // const pairAdminId = await pairData.find({ _id: data.id }).exec();
-  //       //       console.log("pairAdminId", pairAdminId); 
-
-  //       if (updateadmin.admin_type == "SuperAdmin") {
-  //         const pairUpdateadminActivity = await adminActivity(
-  //           req,
-  //           "Pair Updated",
-  //           updateadmin.email,
-  //           updateadmin.admin_type,
-  //           updated.symbol,
-  //           `${updated.symbol} Pair Updated Successfully`
-  //         );
-  //       } else {
-  //         const pairUpdateadminActivity = await adminActivity(
-  //           req,
-  //           "Pair Updated",
-  //           updateadmin.email,  
-  //           updateadmin.adminName,
-  //           updated.symbol,
-  //           `${updated.symbol} Pair Updated Successfully`
-  //         );
-  //       }
-
-  //       //console.log("pairUpdateadminActivity", pairUpdateadminActivity);
-
-  //       if (updated._id) { 
-  //          const pairencryptedResponse = encryptData({
-  //             status: true,
-  //             message: "Pair updated!!",
-  //           });
-  //         return res.send({ status: true, data:  pairencryptedResponse });
-  //       } else {
-  //         return res.send({ status: true, data: "Pair not updated!" });
-  //       }
-  //     } else {
-  //       return res.send({ status: false, data: "No Data!" });
-  //     }
-  //   } catch (err) {
-  //     console.log("err", err);
-  //     return res
-  //       .status(500)
-  //       .json({ status: false, message: "something went wrong" });
-  //   }
-  // };
-
-
 
   adminupdatespotpair = async (req, res) => {
-  try {
-    const adminId = res.locals.admin_id;
-    const updateadmin = await adminUser.findOne({ _id: adminId });
-    // console.log("updateadmin", updateadmin);
-
-    const data = req.body;
-    // console.log("data", data);
-
-    let oldData = await pairData.findById(data.id).lean();
-    // console.log("oldData", oldData); 
-    let updated = await pairData.findByIdAndUpdate(
-      data.id,
-      {
-        $set: {
-          minimumTradeTotal: data.minimumTradeTotal,
-          makerFee: data.makerFee,
-          takerFee: data.takerFee,
-          withdrawFee: data.withdrawFee,
-          swapFee: data.swapFee,
-          withdrawMinimumAmount: data.MinimumAmount,
+    try {
+      const adminId = res.locals.admin_id;
+      const updateadmin = await adminUser.findOne({ _id: adminId });
+      const data = req.body;
+      let oldData = await pairData.findById(data.id).lean();
+      let updated = await pairData.findByIdAndUpdate(
+        data.id,
+        {
+          $set: {
+            minimumTradeTotal: data.minimumTradeTotal,
+            makerFee: data.makerFee,
+            takerFee: data.takerFee,
+            withdrawFee: data.withdrawFee,
+            swapFee: data.swapFee,
+            withdrawMinimumAmount: data.MinimumAmount,
+          },
         },
-      },
-      { new: true } 
-    );
-    // console.log("updated", updated);
-
-    let changes = [];
-    const fields = [
-      "minimumTradeTotal",
-      "makerFee",
-      "takerFee",
-      "withdrawFee",
-      "swapFee",
-      "withdrawMinimumAmount",
-    ];
-
-    fields.forEach((field) => { 
-      // console.log("field---", field); 
-       
-      let oldValue = oldData[field]; 
-      //console.log("oldValue---", oldValue); 
-
-      let newValue =
-        field === "withdrawMinimumAmount" ? data.MinimumAmount : data[field];
-      //  console.log("newValue---", newValue); 
-      if (oldValue != newValue) {
-        changes.push(`${field} `); 
-      }
-    });
-
-    let changeMsg =
-      changes.length > 0 
-        ? `Changes: ${changes.join(", ")}`
-        : "No fields updated"; 
-      //console.log("changeMsg", changeMsg);
-    // Final log message
-    let activityMsg = `${updated.symbol} Pair Updated Successfully – ${changeMsg}`;
-
-    if (updateadmin.admin_type == "SuperAdmin") {
-      await adminActivity(
-        req,
-        data.ip,
-        "Pair Updated",
-        updateadmin.email,
-        updateadmin.admin_type,
-        updated.symbol,
-        activityMsg
+        { new: true }
       );
-    } else {
-      await adminActivity(
-        req,
-        data.ip,
-        "Pair Updated",
-        updateadmin.email,
-        updateadmin.adminName,
-        updated.symbol,
-        activityMsg
-      );
-    }
 
-    if (updated._id) {
-      const pairencryptedResponse = encryptData({
-        status: true,
-        message: "Pair updated!!",
+      let changes = [];
+      const fields = [
+        "minimumTradeTotal",
+        "makerFee",
+        "takerFee",
+        "withdrawFee",
+        "swapFee",
+        "withdrawMinimumAmount",
+      ];
+
+      fields.forEach((field) => {
+
+        let oldValue = oldData[field];
+
+        let newValue =
+          field === "withdrawMinimumAmount" ? data.MinimumAmount : data[field];
+        if (oldValue != newValue) {
+          changes.push(`${field} `);
+        }
       });
-      return res.send({ status: true, data: pairencryptedResponse });
-    } else {
-      return res.send({ status: false, data: "Pair not updated!" });
+
+      let changeMsg =
+        changes.length > 0
+          ? `Changes: ${changes.join(", ")}`
+          : "No fields updated";
+      // Final log message
+      let activityMsg = `${updated.symbol} Pair Updated Successfully – ${changeMsg}`;
+
+      if (updateadmin.admin_type == "SuperAdmin") {
+        await adminActivity(
+          req,
+          data.ip,
+          "Pair Updated",
+          updateadmin.email,
+          updateadmin.admin_type,
+          updated.symbol,
+          activityMsg
+        );
+      } else {
+        await adminActivity(
+          req,
+          data.ip,
+          "Pair Updated",
+          updateadmin.email,
+          updateadmin.adminName,
+          updated.symbol,
+          activityMsg
+        );
+      }
+
+      if (updated._id) {
+        const pairencryptedResponse = encryptData({
+          status: true,
+          message: "Pair updated!!",
+        });
+        return res.send({ status: true, data: pairencryptedResponse });
+      } else {
+        return res.send({ status: false, data: "Pair not updated!" });
+      }
+    } catch (err) {
+      console.log("err", err);
+      return res
+        .status(500)
+        .json({ status: false, message: "something went wrong" });
     }
-  } catch (err) {
-    console.log("err", err);
-    return res
-      .status(500)
-      .json({ status: false, message: "something went wrong" });
-  }
-};
+  };
 
   async getTradeHistory(req, res) {
     const id = res.locals.admin_id;
@@ -817,7 +724,6 @@ class AdmingetMethods {
 
       const countResult = await MappingOrders.aggregate(countPipeline);
       const totalItems = countResult.length > 0 ? countResult[0].total : 0;
-      // console.log("totalitems", totalItems);
 
       res.json({
         status: true,
@@ -842,7 +748,6 @@ class AdmingetMethods {
       limit = 10,
       search = "",
     } = req.query;
-    // console.log('search===', search)
     try {
       if (!id) {
         return res.send({ status: false, message: "Invalid Admin Login..." });
@@ -978,8 +883,8 @@ class AdmingetMethods {
 
       const searchStage = search
         ? {
-            $or: [{ "userData.email": { $regex: search, $options: "i" } }],
-          }
+          $or: [{ "userData.email": { $regex: search, $options: "i" } }],
+        }
         : {};
 
       const swapData = await Userswapshistory.aggregate([
@@ -1025,9 +930,7 @@ class AdmingetMethods {
       ]);
       const totalRecords =
         countAggregation.length > 0 ? countAggregation[0].total : 0;
-      // console.log('totalRecords', totalRecords)
       const totalPages = Math.ceil(totalRecords / limit);
-      // console.log('totalPages', totalPages)
       const totalItems = totalRecords;
 
       if (!swapData || swapData.length === 0) {
@@ -1228,7 +1131,6 @@ class AdmingetMethods {
 
       const countAggregation = await CryptoAndFiat.aggregate(countPipeline);
 
-      // console.log(countAggregation)
       const totalRecords =
         countAggregation.length > 0 ? countAggregation[0].total : 0;
       const totalItems = totalRecords;
