@@ -1,5 +1,6 @@
 const CryptoJS = require("crypto-js");
 const Config = require("../../Config/config")
+const primaryConfig = Config.primarySmtp;
 const jwt = require("jsonwebtoken");
 const path = require('path');
 const nodemailer = require("nodemailer");
@@ -9,6 +10,12 @@ const userModule = require("../../Modules/userModule/userModule")
 const emailOTP = path.resolve(__dirname, '../EmailTemplates/mailBody/mailOTP.txt');
 const SiteSetting = require("../../Modules/adminModule/SiteSetting");
 const mongoose = require('mongoose');
+const { SendMailClient } = require("zeptomail");
+
+const zepto_url = Config.ZEPTOMAIL_URL;
+const zepto_token = Config.ZEPTOMAIL_TOKEN;
+
+const mail_Client = new SendMailClient({ url: zepto_url, token: zepto_token });
 
 const transporter = nodemailer.createTransport({
     host: `${Config.SMTP_Host}`,
@@ -31,25 +38,52 @@ const options = {
 };
 transporter.use("compile", hbs(options));
 
-const forgetPassMailSend = (to, sub, emailBody) => {
-    try {
-        let mailOptions = {
-            from: `${Config.mailFromAddress1}`,
-            to: `${to}`,
-            subject: `${sub}`,
-            html: `${emailBody}`,
-        };
-        transporter.sendMail(mailOptions, (err, info) => {
-            if (err) {
-                console.error("Error sending email:", err);
-            } else {
-                console.log('Mail sent successfully');
-            }
-        });
-    } catch (error) {
-        console.error("Error sending email:", error);
-    }
-}
+const forgetPassMailSend = async (to, subject, emailBody) => {
+  try {
+    const mailOptions = {
+      from: {
+        address: primaryConfig.smtpDetails.email, // must be verified in ZeptoMail
+        name: "noreply"
+      },
+      to: [
+        {
+          email_address: {
+            address: to,
+            name: to.split("@")[0]
+          }
+        }
+      ],
+      subject: subject,
+      htmlbody: emailBody
+    };
+
+    await mail_Client.sendMail(mailOptions);
+
+    console.log("✅ Mail sent successfully");
+  } catch (error) {
+    console.error("❌ Error sending email:", error);
+  }
+};
+
+// const forgetPassMailSend = (to, sub, emailBody) => {
+//     try {
+//         let mailOptions = {
+//             from: `${Config.mailFromAddress1}`,
+//             to: `${to}`,
+//             subject: `${sub}`,
+//             html: `${emailBody}`,
+//         };
+//         transporter.sendMail(mailOptions, (err, info) => {
+//             if (err) {
+//                 console.error("Error sending email:", err);
+//             } else {
+//                 console.log('Mail sent successfully');
+//             }
+//         });
+//     } catch (error) {
+//         console.error("Error sending email:", error);
+//     }
+// }
 
 
 class mobileRoute {

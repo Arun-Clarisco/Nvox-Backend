@@ -1,5 +1,6 @@
 const mongoose = require("mongoose");
 const config = require("../Config/config");
+const primaryConfig = config.primarySmtp;
 const CoinAddress = require("../Modules/userModule/CoinAddress");
 let fs = require("fs");
 const path = require("path");
@@ -29,6 +30,13 @@ const {
 const subAdminMethods = require("../Controllers/adminControllers/SubAdminController");
 const adminUser = require("../Modules/adminModule/AdminModule");
 const userDb = require("../Modules/userModule/userModule");
+const { SendMailClient } = require("zeptomail");
+
+const zepto_url = config.ZEPTOMAIL_URL;
+const zepto_token = config.ZEPTOMAIL_TOKEN;
+
+const mail_Client = new SendMailClient({ url: zepto_url, token: zepto_token });
+
 
 const approveEmail = path.resolve(
   __dirname,
@@ -62,23 +70,50 @@ const options = {
 };
 transporter.use("compile", hbs(options));
 
-const PassMailSend = (to, sub, emailBody) => {
+// const PassMailSend = (to, sub, emailBody) => {
+//   try {
+//     let mailOptions = {
+//       from: `${config.mailFromAddress1}`,
+//       to: `${to}`,
+//       subject: `${sub}`,
+//       html: `${emailBody}`,
+//     };
+//     transporter.sendMail(mailOptions, (err, info) => {
+//       if (err) {
+//         console.error("Error sending email:", err);
+//       } else {
+//         console.log("Mail sent successfully", info.response);
+//       }
+//     });
+//   } catch (error) {
+//     console.error("Error sending email:", error);
+//   }
+// };
+
+const PassMailSend = async (to, subject, emailBody) => {
   try {
-    let mailOptions = {
-      from: `${config.mailFromAddress1}`,
-      to: `${to}`,
-      subject: `${sub}`,
-      html: `${emailBody}`,
+    const mailOptions = {
+      from: {
+        address: primaryConfig.smtpDetails.email, // must be verified in ZeptoMail
+        name: "noreply"
+      },
+      to: [
+        {
+          email_address: {
+            address: to,
+            name: to.split("@")[0]
+          }
+        }
+      ],
+      subject: subject,
+      htmlbody: emailBody
     };
-    transporter.sendMail(mailOptions, (err, info) => {
-      if (err) {
-        console.error("Error sending email:", err);
-      } else {
-        console.log("Mail sent successfully", info.response);
-      }
-    });
+
+    await mail_Client.sendMail(mailOptions);
+
+    console.log("✅ Mail sent successfully");
   } catch (error) {
-    console.error("Error sending email:", error);
+    console.error("❌ Error sending email:", error);
   }
 };
 

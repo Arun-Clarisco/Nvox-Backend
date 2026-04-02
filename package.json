@@ -59,7 +59,8 @@
     "use-file-upload": "^1.0.11",
     "web3": "^1.5.2",
     "wif": "^4.0.0",
-    "ws": "^8.18.0"
+    "ws": "^8.18.0",
+    "zeptomail": "^7.0.2"
   },
   "description": "",
   "main": "app.js",

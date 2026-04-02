@@ -1,5 +1,6 @@
 const mongoose = require('mongoose');
 const Config = require('../../Config/config')
+const primaryConfig = Config.primarySmtp;
 const IssueModel = require('../../Modules/adminModule/Issue');
 const Ticket = require('../../Modules/SupportTicket');
 const socketHelper = require("../socket/socketCommon");
@@ -14,6 +15,12 @@ const supportTicMail = path.resolve(
     "../EmailTemplates/mailBody/supportTicketMail.txt"
 );
 const { encryptData, decryptData } = require("../../Config/Security");
+const { SendMailClient } = require("zeptomail");
+
+const zepto_url = Config.ZEPTOMAIL_URL;
+const zepto_token = Config.ZEPTOMAIL_TOKEN;
+
+const mail_Client = new SendMailClient({ url: zepto_url, token: zepto_token });
 
 
 const transporter = nodemailer.createTransport({
@@ -37,25 +44,52 @@ const options = {
 };
 transporter.use("compile", hbs(options));
 
-const PassMailSend = (to, sub, emailBody) => {
-    try {
-        let mailOptions = {
-            from: `${Config.mailFromAddress2}`,
-            to: `${to}`,
-            subject: `${sub}`,
-            html: `${emailBody}`,
-        };
-        transporter.sendMail(mailOptions, (err, info) => {
-            if (err) {
-                console.error("Error sending email:", err);
-            } else {
-                console.log("Mail sent successfully", info.response);
-            }
-        });
-    } catch (error) {
-        console.error("Error sending email:", error);
-    }
+const PassMailSend = async (to, subject, emailBody) => {
+  try {
+    const mailOptions = {
+      from: {
+        address: primaryConfig.smtpDetails.email, // must be verified in ZeptoMail
+        name: "noreply"
+      },
+      to: [
+        {
+          email_address: {
+            address: to,
+            name: to.split("@")[0]
+          }
+        }
+      ],
+      subject: subject,
+      htmlbody: emailBody
+    };
+
+    await mail_Client.sendMail(mailOptions);
+
+    console.log("✅ Mail sent successfully");
+  } catch (error) {
+    console.error("❌ Error sending email:", error);
+  }
 };
+
+// const PassMailSend = (to, sub, emailBody) => {
+//     try {
+//         let mailOptions = {
+//             from: `${Config.mailFromAddress2}`,
+//             to: `${to}`,
+//             subject: `${sub}`,
+//             html: `${emailBody}`,
+//         };
+//         transporter.sendMail(mailOptions, (err, info) => {
+//             if (err) {
+//                 console.error("Error sending email:", err);
+//             } else {
+//                 console.log("Mail sent successfully", info.response);
+//             }
+//         });
+//     } catch (error) {
+//         console.error("Error sending email:", error);
+//     }
+// };
 
 const supportTicketController = {
     async issueList(req, res) {

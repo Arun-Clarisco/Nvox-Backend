@@ -9,6 +9,7 @@ const path = require("path");
 const fs = require("node:fs");
 const nodemailer = require("nodemailer");
 const hbs = require("nodemailer-express-handlebars");
+const primaryConfig = Config.primarySmtp;
 const resetMailBody = path.resolve(
   __dirname,
   "../EmailTemplates/mailBody/resetPassword.txt"
@@ -34,6 +35,12 @@ const { activeSession, pendingSession, userSocketMap } = require("../../Auth/use
 const SignUpVerifyPhone = require("../../Modules/userModule/PhoneVerification");
 const UsedToken = require("../../Modules/userModule/UsedToken");
 const speakeasy = require("speakeasy");
+const { SendMailClient } = require("zeptomail");
+
+const zepto_url = Config.ZEPTOMAIL_URL;
+const zepto_token = Config.ZEPTOMAIL_TOKEN;
+
+const mail_Client = new SendMailClient({ url: zepto_url, token: zepto_token });
 
 const transporter = nodemailer.createTransport({
   host: `${Config.SMTP_Host}`,
@@ -58,24 +65,51 @@ const options = {
 };
 transporter.use("compile", hbs(options));
 
-const forgetPassMailSend = (to, sub, emailBody) => {
+// const forgetPassMailSend = (to, sub, emailBody) => {
+//   try {
+//     let mailOptions = {
+//       from: `${Config.mailFromAddress1}`,
+//       to: `${to}`,
+//       subject: `${sub}`,
+//       html: `${emailBody}`,
+//     };
+
+//     transporter.sendMail(mailOptions, (err, info) => {
+//       if (err) {
+//         console.error("Error sending email:", err);
+//       } else {
+//         console.log("Mail sent successfully");
+//       }
+//     });
+//   } catch (error) {
+//     console.error("Error sending email:", error);
+//   }
+// };
+
+const forgetPassMailSend = async (to, subject, emailBody) => {
   try {
-    let mailOptions = {
-      from: `${Config.mailFromAddress1}`,
-      to: `${to}`,
-      subject: `${sub}`,
-      html: `${emailBody}`,
+    const mailOptions = {
+      from: {
+        address: primaryConfig.smtpDetails.email, // must be verified in ZeptoMail
+        name: "noreply"
+      },
+      to: [
+        {
+          email_address: {
+            address: to,
+            name: to.split("@")[0]
+          }
+        }
+      ],
+      subject: subject,
+      htmlbody: emailBody
     };
 
-    transporter.sendMail(mailOptions, (err, info) => {
-      if (err) {
-        console.error("Error sending email:", err);
-      } else {
-        console.log("Mail sent successfully");
-      }
-    });
+    await mail_Client.sendMail(mailOptions);
+
+    console.log("✅ Mail sent successfully");
   } catch (error) {
-    console.error("Error sending email:", error);
+    console.error("❌ Error sending email:", error);
   }
 };
 
@@ -109,6 +143,7 @@ class login_register {
       }
 
       const OTP = Math.floor(100000 + Math.random() * 900000);
+      // const OTP = 123456
 
       const token = jwt.sign(
         { verifyOTP: OTP, first_name, last_name, email, password, referral_id },
@@ -256,6 +291,7 @@ class login_register {
       const userName = name || "User";
 
       const OTP = Math.floor(100000 + Math.random() * 900000);
+      // const OTP = 123456
 
       const newToken = jwt.sign(
         {
@@ -1404,7 +1440,7 @@ class login_register {
     }
   };
 
-    sendEmailOTP = async (req, res) => {
+  sendEmailOTP = async (req, res) => {
 
     const decData = req.body.data;
     const Email = await decryptData(decData);
@@ -1491,7 +1527,7 @@ class login_register {
       const data = await decryptData(decData);
       const token = data.token;
       const verifyToken = jwt.verify(token, Config.MAIL_CONFIRM_SECRET);
-      
+
       const currentTimestamp = Math.floor(Date.now() / 1000);
 
       if (currentTimestamp > verifyToken.exp) {
