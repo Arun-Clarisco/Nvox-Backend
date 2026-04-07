@@ -6,7 +6,7 @@
 
 const config = require('../Config/config');
 var {app ,server} = require('../app');
-var debug = require('debug')('rempic:server');
+var debug = require('debug')('nvxopay:server');
 var http = require('http');
 
 /**
