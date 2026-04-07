@@ -1,7 +1,7 @@
 module.exports = {
   apps: [
     {
-      name: "Rempic",
+      name: "NVXO-PAY",
       script: "./bin/www",
       error_file: "pm2logs/err.log",
       out_file: "pm2logs/out.log",
