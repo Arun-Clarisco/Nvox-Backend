@@ -35,7 +35,7 @@
   <!-- Signature -->
   <p style="font-size:14px; margin-top:25px;">
     Sincerely,<br />
-    <strong>Rempic Team</strong>
+    <strong>NVXOPay Team</strong>
   </p>
 
 
