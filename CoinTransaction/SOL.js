@@ -363,7 +363,7 @@ exports.SolanaDeposit = async (userId, symbol) => {
               emailBody = emailBody.replace(new RegExp(key, "g"), chars[key]);
             }
             let subject = `New ${symbol} Deposit Received`;
-            PassMailSend(userData.email, subject, emailBody);
+            await PassMailSend(userData.email, subject, emailBody);
           }
         }
       }
@@ -604,7 +604,7 @@ exports.SolanaWithdraw = async (userId, data, req) => {
           bodyData = bodyData.replace(/{{compImage}}/i, (m) => chars[m]);
           bodyData = bodyData.replace(/{{EmailContent}}/i, (m) => chars[m]);
           let subject = "Withdraw Approved";
-          PassMailSend(SolanaWithdrawUser.email, subject, bodyData);
+          await PassMailSend(SolanaWithdrawUser.email, subject, bodyData);
           return { status: true, message: "Withdraw Accepted" };
         } else {
           return { status: false, message: "Transaction Failed" };

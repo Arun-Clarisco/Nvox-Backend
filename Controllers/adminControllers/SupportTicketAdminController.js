@@ -206,7 +206,7 @@ const supportTicketAdminController = {
             bodyData = bodyData.replace(/{{compImage}}/i, (m) => chars[m]);
             bodyData = bodyData.replace(/{{EmailContent}}/i, (m) => chars[m]);
             let subject = "Support Ticket";
-            PassMailSend(email, subject, bodyData);
+            await PassMailSend(email, subject, bodyData);
 
             const notificationres = await Notification.create({
               notificationType: "supportTicket",
@@ -300,7 +300,7 @@ const supportTicketAdminController = {
               }
 
               let subject = `Your Support Ticket ${ticketId} has been successfully closed`;
-              PassMailSend(email, subject, bodyData);
+              await PassMailSend(email, subject, bodyData);
 
 
               const notificationres = await Notification.create({

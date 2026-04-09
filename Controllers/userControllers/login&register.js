@@ -198,7 +198,7 @@ class login_register {
       // );
 
       const subject = emailSubject;
-      forgetPassMailSend(email, subject, bodyData);
+      await forgetPassMailSend(email, subject, bodyData);
 
       const encryptedResponse = encryptData({
         status: true,
@@ -346,7 +346,7 @@ class login_register {
       );
 
       const subject = emailSubject;
-      forgetPassMailSend(data.email, subject, bodyData);
+      await forgetPassMailSend(data.email, subject, bodyData);
 
       return res.send({
         status: true,
@@ -1002,7 +1002,7 @@ class login_register {
         bodyData = bodyData.replace(/{{compName}}/i, (m) => chars[m]);
         bodyData = bodyData.replace(/{{compImage}}/i, (m) => chars[m]);
         let subject = "Forgot Password";
-        forgetPassMailSend(email, subject, bodyData);
+        await forgetPassMailSend(email, subject, bodyData);
         res.send({
           status: true,
           message:
@@ -1506,7 +1506,7 @@ class login_register {
       );
 
       const subject = emailSubject;
-      forgetPassMailSend(Email.email, subject, bodyData);
+      await forgetPassMailSend(Email.email, subject, bodyData);
 
       const encryptedResponse = encryptData({
         status: true,

@@ -380,7 +380,7 @@ class AdminController {
       bodyData = bodyData.replace(/{{EmailContent}}/i, (m) => chars[m]);
       bodyData = bodyData.replace(/{{Reason}}/i, (m) => chars[m]);
       let subject = "Withdrawal Rejected";
-      forgetPassMailSend(rejectUser.email, subject, bodyData);
+      await forgetPassMailSend(rejectUser.email, subject, bodyData);
 
       return true;
     } catch (error) {
@@ -584,7 +584,7 @@ class AdminController {
         bodyData = bodyData.replace(/{{compName}}/i, (m) => chars[m]);
         bodyData = bodyData.replace(/{{compImage}}/i, (m) => chars[m]);
         let subject = "Reset Your Password";
-        forgetPassMailSend(email, subject, bodyData);
+        await forgetPassMailSend(email, subject, bodyData);
         res.send({
           status: true,
           message:
@@ -792,7 +792,7 @@ class AdminController {
             bodyData = bodyData.replace(/{{compImage}}/i, (m) => chars[m]);
             bodyData = bodyData.replace(/{{EmailContent}}/i, (m) => chars[m]);
             let subject = "Account Deleted";
-            forgetPassMailSend(userData.email, subject, bodyData);
+            await forgetPassMailSend(userData.email, subject, bodyData);
 
             res.send({ status: true, message: "User Data is Deleted", value });
           } else {
@@ -860,7 +860,7 @@ class AdminController {
             bodyData = bodyData.replace(/{{compImage}}/i, (m) => chars[m]);
             bodyData = bodyData.replace(/{{EmailContent}}/i, (m) => chars[m]);
             let subject = "Account DeActivated";
-            forgetPassMailSend(userData.email, subject, bodyData);
+            await forgetPassMailSend(userData.email, subject, bodyData);
 
             res.send({
               status: true,
@@ -923,7 +923,7 @@ class AdminController {
             bodyData = bodyData.replace(/{{compImage}}/i, (m) => chars[m]);
             bodyData = bodyData.replace(/{{EmailContent}}/i, (m) => chars[m]);
             let subject = "Account Activated";
-            forgetPassMailSend(userData.email, subject, bodyData);
+            await forgetPassMailSend(userData.email, subject, bodyData);
 
             res.send({
               status: true,

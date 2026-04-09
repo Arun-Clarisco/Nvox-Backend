@@ -358,7 +358,7 @@ exports.ADADeposit = async (userid, symbol) => {
           emailBody = emailBody.replace(new RegExp(key, "g"), chars[key]);
         }
         let subject = `New ${symbol} Deposit Received`;
-        PassMailSend(userData.email, subject, emailBody);
+        await PassMailSend(userData.email, subject, emailBody);
       }
     }
 
@@ -490,7 +490,7 @@ exports.AdaWithdraw = async (userId, data, req) => {
           bodyData = bodyData.replace(/{{compImage}}/i, (m) => chars[m]);
           bodyData = bodyData.replace(/{{EmailContent}}/i, (m) => chars[m]);
           let subject = "Withdraw Approved";
-          PassMailSend(withdrawAdaUser.email, subject, bodyData);
+          await PassMailSend(withdrawAdaUser.email, subject, bodyData);
 
           return { status: true, message: "Withdraw Accepted" };
         } else {

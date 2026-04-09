@@ -126,7 +126,7 @@ class mobileRoute {
             bodyData = bodyData.replace(/{{userName}}/g, placeholders["{{userName}}"]);
 
             const subject = "Forgot Password";
-            forgetPassMailSend(email, subject, bodyData);
+            await forgetPassMailSend(email, subject, bodyData);
 
             return res.send({ status: true, message: "OTP Sent", token });
         } catch (error) {
@@ -176,7 +176,7 @@ class mobileRoute {
             bodyData = bodyData.replace(/{{userName}}/g, placeholders["{{userName}}"]);
 
             const subject = "Resend Forgot Password Mail OTP";
-            forgetPassMailSend(data.email, subject, bodyData);
+            await forgetPassMailSend(data.email, subject, bodyData);
 
             return res.send({ status: true, message: "A new OTP has been sent to your mail", token: newToken });
 

@@ -599,7 +599,7 @@ class subAdminMethods {
         </div>
         `;
 
-        forgetPassMailSend(
+        await forgetPassMailSend(
           TfaDisableUpdate.email,
           "2FA Disabled Notification",
           emailBody

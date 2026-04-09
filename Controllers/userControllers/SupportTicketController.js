@@ -168,7 +168,7 @@ const supportTicketController = {
                     bodyData = bodyData.replace(/{{compImage}}/i, (m) => chars[m]);
                     bodyData = bodyData.replace(/{{EmailContent}}/i, (m) => chars[m]);
                     let subject = "Support Ticket";
-                    PassMailSend(email, subject, bodyData);
+                    await PassMailSend(email, subject, bodyData);
 
                     const encryptedResponse = encryptData({
                         status: true, message: "Support Ticket Created Successfully!"
