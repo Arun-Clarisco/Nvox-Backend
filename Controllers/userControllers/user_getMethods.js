@@ -52,7 +52,7 @@ class getMethods {
       });
     }
   };
-  
+
   kycGetData = async (req, res) => {
     const id = res.locals.user_id;
 
@@ -93,24 +93,67 @@ class getMethods {
   };
 
   // individual data
+  // IndivGetData = async (req, res) => {
+  //   const id = res.locals.user_id;
+  //   console.log("individual id---",id);
+
+
+  //   if (!id) {
+  //     res.send({ status: false, message: "Id not found", resp: [] });
+  //   }
+  //   try {
+
+  //     const resp = await userIndiviuals.findOne({ user_id: id });
+  //     console.log("resp---",resp);
+
+  //     if (!resp) {
+  //       res.send({ status: false, message: "Id not found", resp: [] });
+  //     }
+
+  //     res.send({ status: true, message: "Individual Data", resp });
+
+  //   } catch (error) {
+  //     res.send({ status: false, message: "Something Went Wrong.." });
+  //   }
+  // };
+
   IndivGetData = async (req, res) => {
     const id = res.locals.user_id;
+    console.log("individual id---", id);
 
     if (!id) {
-      res.send({ status: false, message: "Id not found", resp: [] });
+      return res.send({
+        status: false,
+        message: "Id not found",
+        resp: []
+      });
     }
-    try {
 
+    try {
       const resp = await userIndiviuals.findOne({ user_id: id });
+      console.log("resp---", resp);
 
       if (!resp) {
-        res.send({ status: false, message: "Id not found", resp: [] });
+        return res.send({
+          status: false,
+          message: "Individual not found",
+          resp: []
+        });
       }
 
-      res.send({ status: true, message: "Individual Data", resp });
+      return res.send({
+        status: true,
+        message: "Individual Data",
+        resp
+      });
 
     } catch (error) {
-      res.send({ status: false, message: "Something Went Wrong.." });
+      console.error("Error:", error);
+
+      return res.send({
+        status: false,
+        message: "Something went wrong"
+      });
     }
   };
 
