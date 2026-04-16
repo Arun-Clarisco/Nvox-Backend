@@ -13,7 +13,7 @@
   <!-- OTP -->
   <h1
     style="
-      color:#8950DA;
+      color:#58F9B0;
       font-size:20px;
       font-weight:bold;
       letter-spacing:3px;
@@ -26,7 +26,7 @@
   <!-- Expiry -->
   <p style="font-size:14px; margin-bottom:15px;">
     This OTP is valid for the next
-    <span style="color:#8950DA; font-weight:bold;">
+    <span style="color:#58F9B0; font-weight:bold;">
       {{ExpTime}} minutes
     </span>.
     For security reasons, please do not share this code with anyone.
