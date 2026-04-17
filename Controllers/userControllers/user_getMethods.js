@@ -131,7 +131,7 @@ class getMethods {
 
     try {
       const resp = await userIndiviuals.findOne({ user_id: id });
-      console.log("resp---", resp);
+      // console.log("resp---", resp);
 
       if (!resp) {
         return res.send({
