@@ -916,53 +916,136 @@ class getMethods {
 
   depositChartHistory = async (req, res) => {
     const userId = res.locals.user_id;
+    const { range = "month" } = req.query;
+
     try {
-      const sixMonthsAgo = new Date();
-      sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
+      let startDate = new Date();
+      let endDate = new Date();
+      let groupId = {};
+
+      if (range === "week") {
+        startDate.setDate(startDate.getDate() - 6);
+
+        groupId = {
+          date: {
+            $dateToString: { format: "%Y-%m-%d", date: "$createdDate" }
+          }
+        };
+
+      } else if (range === "year") {
+        const currentYear = new Date().getFullYear();
+
+        startDate = new Date(currentYear, 0, 1);
+        endDate = new Date(currentYear, 11, 31, 23, 59, 59);
+
+        groupId = {
+          month: { $month: "$createdDate" }
+        };
+
+      } else {
+        // month → last 6 months
+        startDate.setMonth(startDate.getMonth() - 5);
+
+        groupId = {
+          year: { $year: "$createdDate" },
+          month: { $month: "$createdDate" }
+        };
+      }
 
       const deposits = await DepositData.aggregate([
         {
           $match: {
             userId: userId,
-            createdDate: { $gte: sixMonthsAgo },
-          },
+            createdDate: { $gte: startDate, $lte: endDate }
+          }
         },
         {
           $group: {
-            _id: {
-              year: { $year: "$createdDate" },
-              month: { $month: "$createdDate" },
-            },
-            totalUSD: { $sum: "$usdAmount" },
-          },
+            _id: groupId,
+            totalUSD: { $sum: "$usdAmount" }
+          }
         },
-        { $sort: { "_id.year": 1, "_id.month": 1 } },
+        { $sort: { "_id.month": 1 } }
       ]);
-      const formattedData = deposits.map((d) => ({
-        month: new Date(d._id.year, d._id.month - 1).toLocaleString("default", {
-          month: "short",
-        }),
-        totalUSD: d.totalUSD,
-      }));
 
-      if (formattedData.length > 0) {
-        res.send({
-          status: true,
-          message: "User Deposit History last Six Months",
-          data: formattedData,
-        });
-      } else {
-        res.send({
-          status: false,
-          message: "No User Deposit History",
-          data: [],
-        });
-      }
-      // res.json(deposits);
+      const formattedData = deposits.map(d => {
+        let label = "";
+
+        if (range === "week") {
+          label = new Date(d._id.date).toLocaleString("default", {
+            weekday: "short"
+          });
+        } else {
+          label = new Date(0, d._id.month - 1).toLocaleString("default", {
+            month: "short"
+          });
+        }
+
+        return {
+          label,
+          totalUSD: d.totalUSD
+        };
+      });
+
+      res.send({
+        status: true,
+        data: formattedData
+      });
+
     } catch (error) {
       res.status(500).json({ message: "Error fetching deposit history" });
     }
   };
+
+  // depositChartHistory = async (req, res) => {
+  //   const userId = res.locals.user_id;
+  //   try {
+  //     const sixMonthsAgo = new Date();
+  //     sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
+
+  //     const deposits = await DepositData.aggregate([
+  //       {
+  //         $match: {
+  //           userId: userId,
+  //           createdDate: { $gte: sixMonthsAgo },
+  //         },
+  //       },
+  //       {
+  //         $group: {
+  //           _id: {
+  //             year: { $year: "$createdDate" },
+  //             month: { $month: "$createdDate" },
+  //           },
+  //           totalUSD: { $sum: "$usdAmount" },
+  //         },
+  //       },
+  //       { $sort: { "_id.year": 1, "_id.month": 1 } },
+  //     ]);
+  //     const formattedData = deposits.map((d) => ({
+  //       month: new Date(d._id.year, d._id.month - 1).toLocaleString("default", {
+  //         month: "short",
+  //       }),
+  //       totalUSD: d.totalUSD,
+  //     }));
+
+  //     if (formattedData.length > 0) {
+  //       res.send({
+  //         status: true,
+  //         message: "User Deposit History last Six Months",
+  //         data: formattedData,
+  //       });
+  //     } else {
+  //       res.send({
+  //         status: false,
+  //         message: "No User Deposit History",
+  //         data: [],
+  //       });
+  //     }
+  //     // res.json(deposits);
+  //   } catch (error) {
+  //     res.status(500).json({ message: "Error fetching deposit history" });
+  //   }
+  // };
 
   // Totalamountchart
 
