@@ -254,7 +254,7 @@ const supportTicketAdminController = {
     }
   },
 
-  async closeTicket(req, res) {   
+  async closeTicket(req, res) {
     const data = req.body;
     let admin_id = res.locals.admin_id;
     let io = socketHelper.GetSocket();
@@ -263,13 +263,14 @@ const supportTicketAdminController = {
       const adminId = await Admin.findOne({ _id: admin_id });
       const ticketData = await Ticket.findOne({ _id: data.ticketId });
       const UserData = await UserDb.findOne({ _id: ticketData.userId });
+      const ticketId = ticketData.ticketId;
       if (adminId) {
         const result = await Ticket.findOneAndUpdate(
           { _id: data.ticketId },
           { $set: { status: data.status } },
           { new: true }
         );
-        
+
         if (result) {
           if (data.status == 0) {
             const findEmail = await Users.findOne({ _id: ticketData.userId });
@@ -280,7 +281,6 @@ const supportTicketAdminController = {
               let bodyData = dataFile.toString();
               const getSitesetting = await siteSetting.findOne({});
               const userName = findEmail.first_name || "";
-              const ticketId = ticketData.ticketId;
               const logoPosition = getSitesetting?.logoPosition || "center";
               const copyright =
                 getSitesetting?.copyright ||
@@ -358,13 +358,33 @@ const supportTicketAdminController = {
 
           } else {
             // await common.adminactivtylog(req, 'Support Ticket', admin_id, adminId.email, 'Ticket Reopen By Admin', 'Ticket Reopen');
+            const notificationres = await Notification.create({
+              notificationType: "supportTicket",
+              title: "Support Ticket",
+              message:
+                `Your support ticket ${ticketId} has been successfully reopened.`,
+              // userId: userId.userId,
+              userList: [
+                {
+                  usersId: ticketData.userId,
+                  readStatus: 0,
+                  status: 1,
+                  clearStatus: 0,
+                },
+              ],
+            });
+
+            io.to(ticketData.userId.toString()).emit("notification", {
+              notificationres,
+            });
+
             const encryptedResponse = encryptData({
               status: true,
               data: "Ticket Opened",
             });
             let TicketCloseAdminActivity;
-            if (encryptedResponse) { 
-              if (adminId.admin_type == "SuperAdmin") { 
+            if (encryptedResponse) {
+              if (adminId.admin_type == "SuperAdmin") {
                 TicketCloseAdminActivity = await adminActivity(
                   req,
                   data.ip,
