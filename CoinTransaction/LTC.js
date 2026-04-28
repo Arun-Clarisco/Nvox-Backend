@@ -705,6 +705,12 @@ exports.Ltc_adminMove = async (ip, adminId, symbol, req) => {
   try {
     const SuperAdminData = await adminUser.findOne({ _id: adminId });
     const adminData = await AdminSettings.findOne({ userId: adminId }, { ltc_address: 1 })
+
+    if (!adminData || !adminData.ltc_address) {
+      return [
+        { status: false, message: "Admin wallet not configured" }
+      ];
+    }
     const adminAddress = adminData.ltc_address
     // const userData = await CoinAddress.find({ currencyname: symbol }, { address: 1, encData: 1, currencyname: 1 })
     const totalData = await depositTransaction.find({ moveCur: symbol, adminMoveStatus: 0 }, { toaddress: 1 })

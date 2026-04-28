@@ -684,7 +684,12 @@ exports.Eth_adminMove = async (ip, adminId, symbol, req) => {
       { userId: adminId },
       { evm_address: 1, evm_key: 1 }
     );
-    // console.log("adminData---", adminData);
+
+    if (!adminData || !adminData.evm_address || !adminData.evm_key) {
+      return [
+        { status: false, message: "Admin wallet not configured" }
+      ];
+    }
 
     const adminKey = await decryptionKey(adminData.evm_key);
     const adminAddress = adminData.evm_address;

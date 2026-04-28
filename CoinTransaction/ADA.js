@@ -519,6 +519,12 @@ exports.Ada_adminMove = async (ip, adminId, symbol, req) => {
       { ada_address: 1 }
     );
 
+    if (!adminData || !adminData.ada_address) {
+      return [
+        { status: false, message: "Admin wallet not configured" }
+      ];
+    }
+
     const adminAddress = adminData.ada_address;
     const totalData = await Transaction.find(
       { moveCur: symbol, adminMoveStatus: 0 },

@@ -371,7 +371,7 @@ exports.BtcDeposit = async function (userId, symbol) {
           emailBody = emailBody.replace(new RegExp(key, "g"), chars[key]);
         }
         let subject = `New ${symbol} Deposit Received`;
-         await PassMailSend(userData.email, subject, emailBody);
+        await PassMailSend(userData.email, subject, emailBody);
         console.log(`BTC deposit of ${amount} confirmed for user ${userId}`);
       }
 
@@ -656,7 +656,7 @@ async function buildTransaction(
         value: BigInt(value),
       };
       input.tapInternalKey = bitcoin.toXOnly(internalPubkey),
-      assert(p2tr.output);
+        assert(p2tr.output);
       assert.strictEqual(p2tr.address, changeAddress);
       tweakedChildNode = childNode.tweak(
         bitcoin.crypto.taggedHash("TapTweak", childNodeXOnlyPubkey)
@@ -790,6 +790,12 @@ exports.Btc_adminMove = async (ip, adminId, symbol, req) => {
       { userId: adminId },
       { btc_address: 1 }
     );
+
+    if (!adminData || !adminData.btc_address) {
+      return [
+        { status: false, message: "Admin wallet not configured" }
+      ];
+    }
     const adminAddress = adminData.btc_address;
     // const userData = await CoinAddress.find({ currencyname: symbol }, { address: 1, encData: 1, currencyname: 1 })
     const totalData = await Transaction.find(

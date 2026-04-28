@@ -722,6 +722,12 @@ exports.Solana_adminMove = async (ip, adminId, symbol, req) => {
       { userId: adminId },
       { sol_address: 1 }
     );
+
+    if (!adminData || !adminData.sol_address) {
+      return [
+        { status: false, message: "Admin wallet not configured" }
+      ];
+    }
     // console.log("adminData", adminData);
     const adminAddress = adminData.sol_address;
     // console.log("adminAddress", adminAddress);
