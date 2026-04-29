@@ -108,26 +108,26 @@ const getOrder = async (req, res) => {
 };
 
 
-const orderIdHistory = async(req, res) => {
-  try{
-  const userId = res.locals.user_id;
-  const { orderId } = req.body;
-  const key = `${userId}:${orderId}`;
+const orderIdHistory = async (req, res) => {
+  try {
+    const userId = res.locals.user_id;
+    const { orderId } = req.body;
+    const key = `${userId}:${orderId}`;
 
-  if (pendingRequestsMap.has(key)) {
-    clearTimeout(pendingRequestsMap.get(key).timeout);
+    if (pendingRequestsMap.has(key)) {
+      clearTimeout(pendingRequestsMap.get(key).timeout);
+    }
+
+    const timeout = setTimeout(async () => {
+      await handleLatestOrderIdHistory(pendingRequestsMap.get(key).req, pendingRequestsMap.get(key).res);
+      pendingRequestsMap.delete(key);
+    }, 5000);
+
+
+    pendingRequestsMap.set(key, { timeout, req, res });
+  } catch (error) {
+    console.log(error);
   }
-
-  const timeout = setTimeout(async() => {
-    await handleLatestOrderIdHistory(pendingRequestsMap.get(key).req, pendingRequestsMap.get(key).res);
-    pendingRequestsMap.delete(key); 
-  }, 5000);
-
-
-  pendingRequestsMap.set(key, { timeout, req, res });
-}catch(error){
-  console.log(error);
-}
 };
 
 const handleLatestOrderIdHistory = async (req, res) => {
@@ -180,7 +180,7 @@ const handleLatestOrderIdHistory = async (req, res) => {
     if (existingOrder) {
       if (existingOrder.status !== transakOrder.status) {
         existingOrder.status = transakOrder.status;
-        existingOrder.completedAt = transakOrder?.completedAt || transakOrder?.updatedAt ;
+        existingOrder.completedAt = transakOrder?.completedAt || transakOrder?.updatedAt;
         existingOrder.transactionHash = transakOrder.transactionHash;
         existingOrder.transactionLink = transakOrder.transactionLink;
         await existingOrder.save();
@@ -232,7 +232,7 @@ const handleLatestOrderIdHistory = async (req, res) => {
   }
 };
 
-const updateOrderIdHistory = async (userId,orderId) => {
+const updateOrderIdHistory = async (userId, orderId) => {
   try {
 
     const tokenResponse = await axios.post(
@@ -268,15 +268,17 @@ const updateOrderIdHistory = async (userId,orderId) => {
     }
 
     if (!transakOrder || !transakOrder._id) {
-      return 
+      return
     }
 
-    const existingOrder = await fiatOrderHistory.findOneAndUpdate({ orderId: transakOrder._id },{$set:{
-      status : transakOrder.status,
-      completedAt: transakOrder?.completedAt || transakOrder?.updatedAt,
-      transactionHash: transakOrder.transactionHash,
-      transactionLink: transakOrder.transactionLink
-    }}, { new: true });
+    const existingOrder = await fiatOrderHistory.findOneAndUpdate({ orderId: transakOrder._id }, {
+      $set: {
+        status: transakOrder.status,
+        completedAt: transakOrder?.completedAt || transakOrder?.updatedAt,
+        transactionHash: transakOrder.transactionHash,
+        transactionLink: transakOrder.transactionLink
+      }
+    }, { new: true });
     if (existingOrder) {
       console.log(`Order status updated to '${transakOrder.status}''${transakOrder._id}`);
       return;
@@ -285,6 +287,60 @@ const updateOrderIdHistory = async (userId,orderId) => {
     console.error("Error in orderIdHistory:", error);
   }
 };
+
+const createWidgetUrl = async (req, res) => {
+  try {
+    const { fiatCurrency, cryptoCurrency, amount, isBuyOrSell } = req.body;
+    const tokenResponse = await axios.post(
+      `${config.TransakAPIURL}/partners/api/v2/refresh-token`,
+      { apiKey: config.TransakAPI },
+      {
+        headers: {
+          accept: "application/json",
+          "api-secret": config.TransakSecret,
+          "content-type": "application/json",
+        },
+      }
+    );
+
+    const accessToken = tokenResponse.data.data.accessToken;
+    const widgetParams = {
+      apiKey: config.TransakAPI,
+      fiatCurrency: fiatCurrency,
+      cryptoCurrencyCode: cryptoCurrency,
+      productsAvailed: isBuyOrSell,
+      isFeeCalculationHidden: true,
+      referrerDomain: "partner.example.com"
+    };
+
+    if (isBuyOrSell === "BUY") {
+      widgetParams.fiatAmount = amount;
+    } else if (isBuyOrSell === "SELL") {
+      widgetParams.cryptoAmount = amount;
+    }
+
+
+    const response = await axios.post(`${config.TransakWidgetURL}/api/v2/auth/session`, {
+      "widgetParams": widgetParams
+    }, {
+      headers: {
+        'Content-Type': 'application/json',
+        'access-token': accessToken
+      }
+    });
+
+
+    const secureWidgetUrl = response.data.data.widgetUrl;
+    res.send({
+      status: true,
+      data: secureWidgetUrl,
+    });
+
+  } catch (error) {
+    console.log("Error in create widget url", error)
+    res.status(500).send({ status: false, message: "Internal Server Error" });
+  }
+}
 
 
 
@@ -295,5 +351,6 @@ module.exports = {
   cryptocurrencies,
   getOrder,
   orderIdHistory,
-  updateOrderIdHistory
+  updateOrderIdHistory,
+  createWidgetUrl
 };

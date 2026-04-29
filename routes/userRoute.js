@@ -127,6 +127,7 @@ router.get("/order", userAuth.verifyToken, Transak.getOrder);
 router.get("/get-fiatorder", userAuth.verifyToken, userGetData.userFiatOrderHistoty);
 router.get("/updateUserFiatOrder", userAuth.verifyToken, userGetData.UpdateUserFiatOrderHistoty);
 router.post("/transak-orderId-Data", userAuth.verifyToken, Transak.orderIdHistory)
+router.post("/create-widget", userAuth.verifyToken, Transak.createWidgetUrl)
 
 //swap
 router.post("/user-crypto-swap", userAuth.verifyToken, WalletController.userCryptoSwap);

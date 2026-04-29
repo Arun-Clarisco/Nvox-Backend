@@ -4,6 +4,7 @@ const config = {
   TransakAPI: process.env.TRANSAK_API,
   TransakSecret: process.env.TRANSAK_API_SECRET,
   TransakAPIURL: process.env.TRANSAK_API_URL,
+  TransakWidgetURL: process.env.TRANSAK_WIDGET_URL,
 
   PORT: process.env.PORT,
   serverType: process.env.SERVER_TYPE,
