@@ -17,16 +17,9 @@ const fiatcurrencies = async (req, res) => {
     );
 
     const currencies = Array.isArray(response?.data.response) ? response.data.response : [];
-    console.log("currencies==+", currencies.length);
 
     res.json(currencies);
 
-
-    // if (Array.isArray(response.data.response)) {
-    //   res.json(response.data.response);
-    // } else {
-    //   res.json([]);
-    // }
   } catch (error) {
     console.error(
       "Error fetching fiat currencies:",
