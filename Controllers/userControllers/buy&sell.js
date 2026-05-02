@@ -101,6 +101,7 @@ const getOrder = async (req, res) => {
   } catch (error) {
     console.error("Error:", error.response?.data || error.message);
     res.status(error.response?.status || 500).json({
+      status: false,
       message: "Error fetching order details",
       error: error.response?.data || error.message,
     });
