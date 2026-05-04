@@ -1525,38 +1525,83 @@ class login_register {
     try {
       const decData = req.body.data;
       const data = await decryptData(decData);
-      const token = data.token;
-      const verifyToken = jwt.verify(token, Config.MAIL_CONFIRM_SECRET);
 
-      const currentTimestamp = Math.floor(Date.now() / 1000);
-
-      if (currentTimestamp > verifyToken.exp) {
+      let verifyToken;
+      try {
+        verifyToken = jwt.verify(data.token, Config.MAIL_CONFIRM_SECRET);
+      } catch (err) {
+        if (err.name === "TokenExpiredError") {
+          return res.send({
+            status: false,
+            message: "OTP has expired.",
+          });
+        }
         return res.send({
           status: false,
-          message: "OTP has expired. Please request a new one.",
+          message: "Invalid token",
         });
       }
 
-      if (verifyToken.verifyOTP === Number(data.otp)) {
-        const encryptedResponse = encryptData({
-          status: true,
-          message: "Email verified successfully!",
+      // ✅ OTP validation AFTER token is valid
+      if (verifyToken.verifyOTP !== Number(data.otp)) {
+        return res.send({
+          status: false,
+          message: "Invalid OTP",
         });
-
-        return res.send({ encryptedData: encryptedResponse });
-      } else {
-        return res.send({ status: false, message: "Invalid OTP" });
       }
+
+      const encryptedResponse = encryptData({
+        status: true,
+        message: "Email verified successfully!",
+      });
+
+      return res.send({ encryptedData: encryptedResponse });
+
     } catch (error) {
-      if (error.name === "TokenExpiredError") {
-        res.send({ status: false, message: "OTP Expired " });
-      } else {
-        console.log(error.message, "error");
-        res.send({ message: "Something went to be wrong" });
-      }
+      console.log(error.message, "error");
+      return res.send({
+        status: false,
+        message: "Something went wrong",
+      });
     }
-
   };
+
+  // verifyEmailOTP = async (req, res) => {
+  //   try {
+  //     const decData = req.body.data;
+  //     const data = await decryptData(decData);
+  //     const token = data.token;
+  //     const verifyToken = jwt.verify(token, Config.MAIL_CONFIRM_SECRET);
+
+  //     const currentTimestamp = Math.floor(Date.now() / 1000);
+
+  //     if (currentTimestamp > verifyToken.exp) {
+  //       return res.send({
+  //         status: false,
+  //         message: "OTP has expired. Please request a new one.",
+  //       });
+  //     }
+
+  //     if (verifyToken.verifyOTP === Number(data.otp)) {
+  //       const encryptedResponse = encryptData({
+  //         status: true,
+  //         message: "Email verified successfully!",
+  //       });
+
+  //       return res.send({ encryptedData: encryptedResponse });
+  //     } else {
+  //       return res.send({ status: false, message: "Invalid OTP" });
+  //     }
+  //   } catch (error) {
+  //     if (error.name === "TokenExpiredError") {
+  //       res.send({ status: false, message: "OTP Expired " });
+  //     } else {
+  //       console.log(error.message, "error");
+  //       res.send({ message: "Something went to be wrong" });
+  //     }
+  //   }
+
+  // };
 
   TfaCodeVerify = async (req, res) => {
     try {
