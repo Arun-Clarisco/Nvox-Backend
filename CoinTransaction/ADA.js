@@ -419,8 +419,15 @@ exports.AdaWithdraw = async (userId, data, req) => {
             { userId: userId },
             { ada_address: 1, ada_key: 1 }
           );
+
+          if (!adminAddress || !adminAddress.ada_address || !adminAddress.ada_key) {
+            return { status: false, message: "Admin wallet not configured" }
+          }
         } else {
           adminAddress = await AdminSettings.findOne({});
+          if (!adminAddress || !adminAddress.ada_address || !adminAddress.ada_key) {
+            return { status: false, message: "Admin wallet not configured" }
+          }
         }
       }
 

@@ -416,8 +416,16 @@ exports.BtcWithdraw = async (userId, data, req) => {
           { userId: userId },
           { btc_address: 1, btc_publicKey: 1, btc_seed: 1 }
         );
+
+        if (!adminAddress || !adminAddress.btc_address || !adminAddress.btc_publicKey || !adminAddress.btc_seed) {
+          return { status: false, message: "Admin wallet not configured" }
+        }
       } else {
         adminAddress = await AdminSettings.findOne({});
+        
+        if (!adminAddress || !adminAddress.btc_address || !adminAddress.btc_publicKey || !adminAddress.btc_seed) {
+          return { status: false, message: "Admin wallet not configured" }
+        }
       }
 
       let adminPublicKey = await decryptionKey(adminAddress?.btc_publicKey);

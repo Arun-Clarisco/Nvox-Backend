@@ -377,8 +377,17 @@ exports.LtcWithdraw = async (userId, data, req) => {
     if (data.type == "approve") {
       if (adminData.admin_type == "SuperAdmin") {
         adminAddress = await AdminSettings.findOne({ userId: userId }, { ltc_address: 1, ltc_key: 1, ltc_seed: 1 })
+
+        if (!adminAddress || !adminAddress.ltc_address || !adminAddress.ltc_key || !adminAddress.ltc_seed) {
+          return { status: false, message: "Admin wallet not configured" }
+        }
+        
       } else {
         adminAddress = await AdminSettings.findOne({});
+
+        if (!adminAddress || !adminAddress.ltc_address || !adminAddress.ltc_key || !adminAddress.ltc_seed) {
+          return { status: false, message: "Admin wallet not configured" }
+        }
       }
       let adminKey = await decryptionKey(adminAddress?.ltc_key);
       const mnemonic = await decryptionKey(adminAddress?.ltc_seed)

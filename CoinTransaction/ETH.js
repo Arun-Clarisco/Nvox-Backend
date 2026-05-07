@@ -484,9 +484,16 @@ exports.EthWithdraw = async (userId, data, req) => {
           { userId: userId },
           { evm_address: 1, evm_key: 1 }
         );
+
+        if (!adminAddress || !adminAddress.evm_address || !adminAddress.evm_key) {
+          return { status: false, message: "Admin wallet not configured" }
+        }
       } else {
         adminAddress = await AdminSettings.findOne({});
-        // console.log("adminAddress>>>>>", adminAddress);
+
+        if (!adminAddress || !adminAddress.evm_address || !adminAddress.evm_key) {
+          return { status: false, message: "Admin wallet not configured" }
+        }
 
       }
 

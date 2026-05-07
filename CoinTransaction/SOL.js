@@ -520,17 +520,18 @@ exports.SolanaWithdraw = async (userId, data, req) => {
           { userId: userId },
           { sol_address: 1, sol_key: 1 }
         );
-        // console.log("adminAddressAdmin", adminAddress);
-        // console.log("adminAddressAdmin-_key", adminAddress?.sol_key);
+
+        if (!adminAddress || !adminAddress.sol_address || !adminAddress.sol_key) {
+          return { status: false, message: "Admin wallet not configured" }
+        }
 
       }
       else {
-        // console.log("work");
-
         adminAddress = await AdminSettings.findOne({});
-        // console.log("adminAddress>>>>", adminAddress);
-
-        // console.log("adminAddresssol_key", adminAddress?.sol_key);
+        
+        if (!adminAddress || !adminAddress.sol_address || !adminAddress.sol_key) {
+          return { status: false, message: "Admin wallet not configured" }
+        }
       }
 
 
