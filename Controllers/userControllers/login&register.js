@@ -1528,7 +1528,7 @@ class login_register {
 
       let verifyToken;
       try {
-        verifyToken = jwt.verify(data.token, Config.MAIL_CONFIRM_SECRET);
+        verifyToken = jwt.verify(data.token, Config.MAIL_CONFIRM_SECRET,{clockTolerance: 10});
       } catch (err) {
         if (err.name === "TokenExpiredError") {
           return res.send({
