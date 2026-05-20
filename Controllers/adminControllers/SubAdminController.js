@@ -5,6 +5,7 @@ const primaryConfig = Config.primarySmtp;
 const nodemailer = require("nodemailer");
 const hbs = require("nodemailer-express-handlebars");
 const path = require("path");
+const fs = require("node:fs");
 const subadminactvityDb = require("../../Modules/adminModule/AdminActivity");
 const axios = require("axios");
 const { encryptData, decryptData } = require("../../Config/Security");
@@ -12,11 +13,17 @@ const UserDb = require("../../Modules/userModule/userModule");
 const { findById, findByIdAndUpdate } = require("../../Modules/SupportTicket");
 const mongoose = require("mongoose");
 const { SendMailClient } = require("zeptomail");
+const SiteSetting = require('../../Modules/adminModule/SiteSetting');
 
 const zepto_url = Config.ZEPTOMAIL_URL;
 const zepto_token = Config.ZEPTOMAIL_TOKEN;
 
 const mail_Client = new SendMailClient({ url: zepto_url, token: zepto_token });
+
+const subAdminPassword = path.resolve(
+  __dirname,
+  "../EmailTemplates/mailBody/subAdminPassword.txt"
+);
 
 
 const transporter = nodemailer.createTransport({
@@ -176,29 +183,57 @@ class subAdminMethods {
           "SubAdmin created successfully!"
         );
 
+        const data = fs.readFileSync(subAdminPassword, "utf8");
+        let bodyData = data.toString();
+
+
+        const getSitesetting = await SiteSetting.findOne({});
+        const copyright = getSitesetting?.copyright || "© 2025 NvxoPay. All rights reserved.";
+        const logo = getSitesetting?.logo || Config.Cloudinary_logo;
+        const emailSubject = "Account Creation Mail Notification";
+        const logoPosition = getSitesetting?.logoPosition || 'center';
+        const userName = adminName || "User";
         const forgotLink = `${Config.AdminPanel_URl}/forgot-password`;
-        const emailBody = `
-      <p>Hi ${SubAdminSaveData.adminName},</p>
-      <p>Your  account has been created successfully.</p>
-      <p>To set your password, please go to the forgot password page:</p>
-      <a href="${forgotLink}" target="_blank">${forgotLink}</a> 
-      <br />
-      <p>Then enter your email and follow the steps to reset your password.</p>
-    `;
+
+
+        const placeholders = {
+          "{{compName}}": copyright,
+          "{{compImage}}": logo,
+          "{{logoPosition}}": logoPosition,
+          "{{userName}}": userName,
+          "{{link}}": forgotLink,
+        };
+
+
+        bodyData = bodyData.replace(
+          /{{compName}}/g,
+          placeholders["{{compName}}"]
+        );
+        bodyData = bodyData.replace(
+          /{{compImage}}/g,
+          placeholders["{{compImage}}"]
+        );
+        bodyData = bodyData.replace(
+          /{{logoPosition}}/g,
+          placeholders["{{logoPosition}}"]
+        );
+        bodyData = bodyData.replace(
+          /{{userName}}/g,
+          placeholders["{{userName}}"]
+        );
+        bodyData = bodyData.replace(
+          /{{link}}/g,
+          placeholders["{{link}}"]
+        );
 
         // 🟢 Mail Send
-        await forgetPassMailSend(
-          SubAdminSaveData.email,
-          "Account Creation Mail Notification",
-          emailBody
-        );
+        await forgetPassMailSend(email, emailSubject, bodyData);
 
         if (SubAdminSaveData) {
           subAdminCreateencryptRes = encryptData({
             status: true,
             message: "SubAdmin created successfully.",
             data: SubAdminSaveData,
-            emailBody: emailBody,
           });
         } else {
           subAdminCreateencryptRes = encryptData({
