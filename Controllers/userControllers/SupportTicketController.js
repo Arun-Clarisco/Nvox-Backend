@@ -156,7 +156,7 @@ const supportTicketController = {
                     const emailCotent = `Your Issue Submited Successfully, TicketId : ${ticket_id}`;
                     const logoPosition = getSitesetting?.logoPosition || 'center';
                     const copyright =
-                        getSitesetting?.copyright || "© 2025 Rempic. All rights reserved.";
+                        getSitesetting?.copyright || "© 2025 NvxoPay. All rights reserved.";
                     const chars = {
                         "{{logoPosition}}": logoPosition,
                         "{{compName}}": copyright,
@@ -268,7 +268,7 @@ const supportTicketController = {
                     //     const emailCotent = `Message send to Admin, TicketId : ${ticketInfo.ticketId}`;
                     //     const logoPosition = getSitesetting?.logoPosition || 'center';
                     //     const copyright =
-                    //         getSitesetting?.copyright || "© 2025 Rempic. All rights reserved.";
+                    //         getSitesetting?.copyright || "© 2025 NvxoPay. All rights reserved.";
                     //     const chars = {
                     //         "{{logoPosition}}": logoPosition,
                     //         "{{compName}}": copyright,

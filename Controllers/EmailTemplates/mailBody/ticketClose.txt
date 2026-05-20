@@ -12,13 +12,13 @@
     </p>
 
     <p style="font-size: 15px; line-height: 1.6; margin-top: 20px; color: #444;">
-      Thank you for choosing <strong>REMPIC</strong>. We appreciate your trust in us.
+      Thank you for choosing <strong>NvxoPay</strong>. We appreciate your trust in us.
     </p>
 
     <p style="font-size: 15px; line-height: 1.6; color: #444;">
       Best regards,<br>
       <strong>Support Team</strong><br>
-      <strong>REMPIC</strong>
+      <strong>NvxoPay</strong>
     </p>
   </div>
 

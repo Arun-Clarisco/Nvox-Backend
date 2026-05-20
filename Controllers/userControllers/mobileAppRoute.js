@@ -99,7 +99,7 @@ class mobileRoute {
             const OTP = Math.floor(100000 + Math.random() * 900000);
             const expireTimeInMinutes = 2;
             const emailContent = 'Use the OTP to complete your verification. Do not share it with anyone.';
-            const copyright = getSitesetting?.copyright || "© 2025 Rempic. All rights reserved.";
+            const copyright = getSitesetting?.copyright || "© 2025 NvxoPay. All rights reserved.";
             const token = jwt.sign({ verifyOTP: OTP, userEmail }, Config.MAIL_CONFIRM_SECRET, { expiresIn: `${expireTimeInMinutes}m` });
             const logoPosition = getSitesetting?.logoPosition || 'center';
             const userName = name || "User";
@@ -144,7 +144,7 @@ class mobileRoute {
             const OTP = Math.floor(100000 + Math.random() * 900000);
             const expireTimeInMinutes = getSitesetting?.resendOTPexpireTime || 2;
             const emailContent = 'Use the OTP to complete your verification. Do not share it with anyone.';
-            const copyright = getSitesetting?.copyright || "© 2025 Rempic. All rights reserved.";
+            const copyright = getSitesetting?.copyright || "© 2025 NvxoPay. All rights reserved.";
             const logoPosition = getSitesetting?.logoPosition || 'center';
             const userName = name || "User";
 

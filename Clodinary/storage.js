@@ -11,7 +11,7 @@ Cloudinary.config({
 const CloudStorage = new CloudinaryStorage({
     cloudinary: Cloudinary,
     params: {
-        folder: "Rempic",
+        folder: "NVXO",
         resource_type: 'auto',
     }
 })

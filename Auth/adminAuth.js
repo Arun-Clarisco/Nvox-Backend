@@ -2,7 +2,7 @@ const jwt = require('jsonwebtoken');
 const adminCollection = require('../Modules/adminModule/AdminModule');
 const config = require('../Config/config');
 
-exports.verifyToken = async(req, res, next) => {
+exports.verifyToken = async (req, res, next) => {
   const token = req.headers['authorization'];
 
   if (!token) {
@@ -15,16 +15,23 @@ exports.verifyToken = async(req, res, next) => {
       return res.send({ status: false, message: 'Failed to authenticate token' });
     }
     let adminStatus = await adminCollection.findOne({ _id: decoded.id })
-     //return res.send({status :  true, adminStatus}); 
+    //return res.send({status :  true, adminStatus}); 
     if (adminStatus) {
-      res.locals.admin_id = adminStatus._id; 
+      res.locals.admin_id = adminStatus._id;
+      if (adminStatus.admin_type === "SubAdmin" && adminStatus.active_status === "Inactive") {
+        return res.send({
+          status: false,
+          isLogout: true,
+          message: 'Your account has been deactivated by admin'
+        });
+      }
       //res.send({status : true, data: adminStatus}); 
-      next(); 
-      
+      next();
+
     } else {
       return res.send({ status: false, message: 'session expired' });
-    }  
-   
+    }
+
   });
 }
 

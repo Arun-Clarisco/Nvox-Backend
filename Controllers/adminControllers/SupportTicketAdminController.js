@@ -194,7 +194,7 @@ const supportTicketAdminController = {
             const logoPosition = getSitesetting?.logoPosition || "center";
             const copyright =
               getSitesetting?.copyright ||
-              "© 2025 Rempic. All rights reserved.";
+              "© 2025 NvxoPay. All rights reserved.";
             const chars = {
               "{{logoPosition}}": logoPosition,
               "{{compName}}": copyright,
@@ -284,7 +284,7 @@ const supportTicketAdminController = {
               const logoPosition = getSitesetting?.logoPosition || "center";
               const copyright =
                 getSitesetting?.copyright ||
-                "© 2025 Rempic. All rights reserved.";
+                "© 2025 NvxoPay. All rights reserved.";
               const chars = {
                 "{{logoPosition}}": logoPosition,
                 "{{compName}}": copyright,

@@ -132,7 +132,7 @@ class login_register {
       const emailContent =
         getSitesetting?.emailContent || "This is your Mail Verification OTP";
       const copyright =
-        getSitesetting?.copyright || "© 2025 Rempic. All rights reserved.";
+        getSitesetting?.copyright || "© 2025 NvxoPay. All rights reserved.";
       const logo = getSitesetting?.logo || Config.Cloudinary_logo;
       const emailSubject = getSitesetting?.emailSubject || "Email Verification";
       const logoPosition = getSitesetting?.logoPosition || 'center';
@@ -284,7 +284,7 @@ class login_register {
       const emailContent =
         getSitesetting?.emailContent || "This is your Mail Verification OTP";
       const copyright =
-        getSitesetting?.copyright || "© 2025 Rempic. All rights reserved.";
+        getSitesetting?.copyright || "© 2025 NvxoPay. All rights reserved.";
       const logo = getSitesetting?.logo || Config.Cloudinary_logo;
       const emailSubject = getSitesetting?.emailSubject || "Email Verification";
       const logoPosition = getSitesetting?.logoPosition || 'center';
@@ -596,7 +596,7 @@ class login_register {
       const OTP = 123456; // For testing purposes
       // const OTP = Math.floor(100000 + Math.random() * 900000);
       // const message = await client.messages.create({
-      //   body: `Rempic SMS OTP is ${OTP} `,
+      //   body: `NvxoPay SMS OTP is ${OTP} `,
       //   to: `${countryCode}${phone}`,
       //   from: Config.Admin_NUMB,
       // });
@@ -681,7 +681,7 @@ class login_register {
       // const OTP = Math.floor(100000 + Math.random() * 900000);
       const OTP = 123456; // For testing purposes
       // const message = await client.messages.create({
-      //   body: `Rempic SMS OTP is ${OTP} `,
+      //   body: `NvxoPay SMS OTP is ${OTP} `,
       //   to: `${countryCode}${phone}`,
       //   from: Config.Admin_NUMB,
       // });
@@ -991,7 +991,7 @@ class login_register {
         });
         const getSitesetting = await SiteSetting.findOne({});
         const copyright =
-          getSitesetting?.copyright || "© 2025 Rempic. All rights reserved.";
+          getSitesetting?.copyright || "© 2025 NvxoPay. All rights reserved.";
         const chars = {
           "{{link}}": `${Config.Frontend_URL}/resetpassword/${encodeURIComponent(token)}`,
           "{{compName}}": copyright,
@@ -1451,7 +1451,7 @@ class login_register {
       const expireTimeInMinutes = getSitesetting?.expireTime || 5;
       const emailContent = "We received a request to withdraw funds from your account. To proceed with this transaction, please use the One-Time Password (OTP) below:";
       const copyright =
-        getSitesetting?.copyright || "© 2025 Rempic. All rights reserved.";
+        getSitesetting?.copyright || "© 2025 NvxoPay. All rights reserved.";
       const logo = getSitesetting?.logo || Config.Cloudinary_logo;
       const emailSubject = "Withdrawal OTP Verification Code";
       const logoPosition = getSitesetting?.logoPosition || 'center';

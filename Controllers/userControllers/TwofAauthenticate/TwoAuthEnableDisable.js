@@ -24,7 +24,7 @@ const generateSecret = async (req, res) => {
 
     if (action == "generate") {
       const secretToken = speakeasy.generateSecret({ length: 15 });
-      const issuer = "Rempic";
+      const issuer = "NvxoPay";
       const label = getUser.email;
       const otpauthUrl = `otpauth://totp/${encodeURIComponent(
         issuer

@@ -366,7 +366,7 @@ class AdminController {
       const logoPosition = getSitesetting?.logoPosition || "center";
       const copyright =
         getSitesetting?.copyright ||
-        "© 2025 Rempic. All rights reserved.";
+        "© 2025 NvxoPay. All rights reserved.";
       const chars = {
         "{{logoPosition}}": logoPosition,
         "{{compName}}": copyright,
@@ -573,7 +573,7 @@ class AdminController {
         });
         const getSitesetting = await SettingData.findOne({});
         const copyright =
-          getSitesetting?.copyright || "© 2025 Rempic. All rights reserved.";
+          getSitesetting?.copyright || "© 2025 NvxoPay. All rights reserved.";
         const chars = {
           "{{link}}": `${Config.AdminPanel_URl}/resetpassword/${token}`,
           "{{compName}}": copyright,
@@ -778,7 +778,7 @@ class AdminController {
             const logoPosition = getSitesetting?.logoPosition || "center";
             const copyright =
               getSitesetting?.copyright ||
-              "© 2025 Rempic. All rights reserved.";
+              "© 2025 NvxoPay. All rights reserved.";
             const chars = {
               "{{UserName}}": userName,
               "{{logoPosition}}": logoPosition,
@@ -846,7 +846,7 @@ class AdminController {
             const logoPosition = getSitesetting?.logoPosition || "center";
             const copyright =
               getSitesetting?.copyright ||
-              "© 2025 Rempic. All rights reserved.";
+              "© 2025 NvxoPay. All rights reserved.";
             const chars = {
               "{{UserName}}": userName,
               "{{logoPosition}}": logoPosition,
@@ -909,7 +909,7 @@ class AdminController {
             const logoPosition = getSitesetting?.logoPosition || "center";
             const copyright =
               getSitesetting?.copyright ||
-              "© 2025 Rempic. All rights reserved.";
+              "© 2025 NvxoPay. All rights reserved.";
             const chars = {
               "{{UserName}}": userName,
               "{{logoPosition}}": logoPosition,
