@@ -566,6 +566,10 @@ class AdminController {
       const email = req.body.email;
       let Admin = await adminUser.findOne({ email: email });
       if (Admin) {
+
+        if(Admin.admin_type == "SubAdmin" && Admin.password == ""){
+          return res.send({status : false , message : "Password setup link has been sent to your email"})
+        }
         const data = fs.readFileSync(resetMailBody, "utf8");
         let bodyData = data.toString();
         const token = jwt.sign({ id: Admin._id }, Config.MAIL_CONFIRM_SECRET, {
