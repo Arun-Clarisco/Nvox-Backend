@@ -993,7 +993,7 @@ class login_register {
         const copyright =
           getSitesetting?.copyright || "© 2025 Rempic. All rights reserved.";
         const chars = {
-          "{{link}}": `${Config.Frontend_URL}/resetpassword/${token}`,
+          "{{link}}": `${Config.Frontend_URL}/resetpassword/${encodeURIComponent(token)}`,
           "{{compName}}": copyright,
           "{{compImage}}": `${Config.Cloudinary_logo}`,
         };
