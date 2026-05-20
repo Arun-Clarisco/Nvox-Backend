@@ -601,19 +601,27 @@ class getMethods {
 
   getUserTransactionData = async (req, res) => {
     const id = res.locals.user_id;
+    console.log("id--", id);
+
 
     try {
       if (!id) {
-        return res.send({ status: false, message: "Invalid User Login..." });
+        return res.send({
+          status: false,
+          message: "Invalid User Login...",
+        });
       }
 
       const thirtyDaysAgo = new Date();
       thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
-      const result = await userWithdrawHistory.aggregate([
+      const userObjectId = new mongoose.Types.ObjectId(id);
+
+      // Total Withdraw
+      const withdrawResult = await userWithdrawHistory.aggregate([
         {
           $match: {
-            userId: id,
+            userId: userObjectId,
             status: 2,
             createdDate: { $gte: thirtyDaysAgo },
           },
@@ -621,68 +629,91 @@ class getMethods {
         {
           $group: {
             _id: null,
-            totalSum: { $sum: "$TotalAmount_in_usdprice" },
+            totalSum: {
+              $sum: {
+                $toDouble: "$TotalAmount_in_usdprice",
+              },
+            },
           },
         },
       ]);
 
-      const totalSum = result.length > 0 ? result[0].totalSum : 0;
+      console.log("withdrawResult--", withdrawResult);
+
+
+      // Total Deposit
       const depositResult = await DepositData.aggregate([
         {
           $match: {
-            userId: id,
+            userId: userObjectId,
             createdDate: { $gte: thirtyDaysAgo },
           },
         },
         {
           $group: {
             _id: null,
-            totalDeposit: { $sum: "$usdAmount" },
+            totalDeposit: {
+              $sum: "$usdAmount",
+            },
           },
         },
       ]);
 
-      const depositTotalSum =
-        depositResult.length > 0 ? depositResult[0].totalDeposit : 0;
-      const WithdrawDatatest = await WithdrawData.find({ userId: id })
-        .sort({ _id: -1 })
-        .limit(2);
-      const depositDatatest = await DepositData.find({ userId: id })
-        .sort({ _id: -1 })
-        .limit(2);
+      const totalWithdraw =
+        withdrawResult.length > 0
+          ? withdrawResult[0].totalSum
+          : 0;
 
+      const totalDeposit =
+        depositResult.length > 0
+          ? depositResult[0].totalDeposit
+          : 0;
+
+      // Latest Withdraws
       const withdrawData = await WithdrawData.find({
-        userId: id,
+        userId: userObjectId,
         status: 2,
-      }).sort({ _id: -1 });
+      })
+        .sort({ createdDate: -1 })
+        .limit(4);
 
-      const depositData = await DepositData.find({ userId: id }).sort({
-        _id: -1,
-      });
+      // Latest Deposits
+      const depositData = await DepositData.find({
+        userId: userObjectId,
+      })
+        .sort({ createdDate: -1 })
+        .limit(4);
 
-      const combined = [...withdrawData, ...depositData];
+      // Merge + Sort
+      const combined = [...withdrawData, ...depositData]
+        .sort(
+          (a, b) =>
+            new Date(b.createdDate) -
+            new Date(a.createdDate)
+        )
+        .slice(0, 4);
 
-      // Sort by createdDate descending
-      combined.sort(
-        (a, b) => new Date(b.createdDate) - new Date(a.createdDate)
-      );
-
-      const latest4 = combined.slice(0, 4);
-      const mergedData = depositDatatest.concat(WithdrawDatatest);
-
-      if (!mergedData) {
-        return res.send({ status: false, message: "No data found" });
+      if (combined.length === 0) {
+        return res.send({
+          status: false,
+          message: "No transaction data found",
+        });
       }
 
-      res.send({
+      return res.send({
         status: true,
-        data: latest4,
-        totalWithdraw: totalSum,
-        totalDeposit: depositTotalSum,
+        data: combined,
+        totalWithdraw,
+        totalDeposit,
       });
+
     } catch (error) {
       console.log({ transactionsError: error });
-      res.status(500).json({ status: false, message: "Something went wrong" });
+
+      return res.status(500).json({
+        status: false,
+        message: "Something went wrong",
+      });
     }
   };
 
@@ -996,56 +1027,6 @@ class getMethods {
       res.status(500).json({ message: "Error fetching deposit history" });
     }
   };
-
-  // depositChartHistory = async (req, res) => {
-  //   const userId = res.locals.user_id;
-  //   try {
-  //     const sixMonthsAgo = new Date();
-  //     sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
-
-  //     const deposits = await DepositData.aggregate([
-  //       {
-  //         $match: {
-  //           userId: userId,
-  //           createdDate: { $gte: sixMonthsAgo },
-  //         },
-  //       },
-  //       {
-  //         $group: {
-  //           _id: {
-  //             year: { $year: "$createdDate" },
-  //             month: { $month: "$createdDate" },
-  //           },
-  //           totalUSD: { $sum: "$usdAmount" },
-  //         },
-  //       },
-  //       { $sort: { "_id.year": 1, "_id.month": 1 } },
-  //     ]);
-  //     const formattedData = deposits.map((d) => ({
-  //       month: new Date(d._id.year, d._id.month - 1).toLocaleString("default", {
-  //         month: "short",
-  //       }),
-  //       totalUSD: d.totalUSD,
-  //     }));
-
-  //     if (formattedData.length > 0) {
-  //       res.send({
-  //         status: true,
-  //         message: "User Deposit History last Six Months",
-  //         data: formattedData,
-  //       });
-  //     } else {
-  //       res.send({
-  //         status: false,
-  //         message: "No User Deposit History",
-  //         data: [],
-  //       });
-  //     }
-  //     // res.json(deposits);
-  //   } catch (error) {
-  //     res.status(500).json({ message: "Error fetching deposit history" });
-  //   }
-  // };
 
   // Totalamountchart
 
