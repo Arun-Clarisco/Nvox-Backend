@@ -601,8 +601,6 @@ class getMethods {
 
   getUserTransactionData = async (req, res) => {
     const id = res.locals.user_id;
-    console.log("id--", id);
-
 
     try {
       if (!id) {
@@ -637,9 +635,6 @@ class getMethods {
           },
         },
       ]);
-
-      console.log("withdrawResult--", withdrawResult);
-
 
       // Total Deposit
       const depositResult = await DepositData.aggregate([
